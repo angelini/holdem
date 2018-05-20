@@ -3,7 +3,9 @@
 (defrecord Card [suit rank])
 
 (def deck
-  (mapcat (fn [rank] (map (fn [suit] (Card. suit rank)) [:heart :spade :diamond :club])) (range 1 14)))
+  (mapcat (fn [rank]
+            (map (fn [suit] (Card. suit rank)) [:heart :spade :diamond :club]))
+          (range 2 15)))
 
 (defn deal-hand [deck]
   (->> (shuffle deck)
@@ -13,7 +15,9 @@
   (let [sorted (sort-by :rank hand)]
     (-> (reduce (fn [[bool last] curr]
                   (if (and bool
-                           (= (+ (:rank last) 1) (:rank curr)))
+                           (or (= (+ (:rank last) 1) (:rank curr))
+                               ;; 2, 3, 4, 5, 14 for low-ace
+                               (and (= (:rank last) 5) (= (:rank curr) 14))))
                     [true curr]
                     [false curr]))
                 [true (first sorted)]
@@ -37,11 +41,79 @@
        (map second)
        (filter (fn [group] (= (count group) size)))))
 
-(defn doubles [hand] (rank-groups 2 hand))
+(defn pairs [hand] (rank-groups 2 hand))
 (defn triples [hand] (rank-groups 3 hand))
 (defn quads [hand] (rank-groups 4 hand))
 
-;; (def hand-categories
-;;   [straight-flush?
-;;    (fn [left right]
-;;      )])
+(defn pairs? [hand] (not (empty? (pairs hand))))
+(defn two-pair? [hand] (= (count (pairs hand)) 2))
+(defn triples? [hand] (not (empty? (triples hand))))
+(defn quads? [hand] (not (empty? (quads hand))))
+
+(defn full-house? [hand]
+  (and (= (count (pairs hand)) 1)
+       (= (count (triples hand)) 1)))
+
+(defn cmp-sorted-ranks [left right]
+  (compare
+   (->> left (sort-by :rank) (map :rank) reverse vec)
+   (->> right (sort-by :rank) (map :rank) reverse vec)))
+
+(defn group-ranks [group-fn hand]
+  (->> (group-fn hand)
+       (map first)
+       (sort-by :rank)
+       (map :rank)
+       reverse
+       vec))
+
+(defn cmp-group-ranks [group-fn left right]
+  (let [left-group-ranks (group-ranks group-fn left)
+        right-group-ranks (group-ranks group-fn right)]
+    (condp = (compare left-group-ranks
+                      right-group-ranks)
+      0 (cmp-sorted-ranks (->> left
+                               (remove #(contains? left-group-ranks (:rank %))))
+                          (->> right
+                               (remove #(contains? right-group-ranks (:rank %)))))
+      1 1
+      -1 -1)))
+
+(def hand-categories
+  [{:check straight-flush?
+    :cmp-equal cmp-sorted-ranks}
+   {:check quads?
+    :cmp-equal (partial cmp-group-ranks quads)}
+   {:check full-house?
+    :cmp-equal (fn [left right]
+                 (let [cmp-triples (cmp-group-ranks triples left right)]
+                   (if (not= 0 cmp-triples)
+                     cmp-triples
+                     (cmp-group-ranks pairs left right))))}
+   {:check flush?
+    :cmp-equal cmp-sorted-ranks}
+   {:check straight?
+    :cmp-equal cmp-sorted-ranks}
+   {:check triples?
+    :cmp-equal (partial cmp-group-ranks triples)}
+   {:check two-pair?
+    :cmp-equal (fn [left right]
+                 (compare
+                  (group-ranks pairs left)
+                  (group-ranks pairs right)))}
+   {:check pairs?
+    :cmp-equal (partial cmp-group-ranks pairs)}
+   {:check (fn [hand] true)
+    :cmp-equal cmp-sorted-ranks}
+   ])
+
+(defn compare-hands [left right]
+  (loop [{check :check
+          cmp-equal :cmp-equal} (first hand-categories)
+         rest-categories (rest hand-categories)]
+    (condp = [(check left) (check right)]
+      [true true] (cmp-equal left right)
+      [true false] 1
+      [false true] -1
+      [false false] (recur (first rest-categories)
+                           (rest rest-categories)))))
