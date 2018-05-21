@@ -13,26 +13,24 @@
 
 (defn straight? [hand]
   (let [sorted (sort-by :rank hand)]
-    (-> (reduce (fn [[bool last] curr]
-                  (if (and bool
-                           (or (= (+ (:rank last) 1) (:rank curr))
-                               ;; 2, 3, 4, 5, 14 for low-ace
-                               (and (= (:rank last) 5) (= (:rank curr) 14))))
-                    [true curr]
-                    [false curr]))
-                [true (first sorted)]
-                (rest sorted))
-        (first))))
+    (loop [card (first sorted)
+           rest-hand (rest sorted)]
+      (if (or (= (+ (:rank card) 1) (:rank (first rest-hand)))
+              ;; 2, 3, 4, 5, 14 for low-ace
+              (and (= (:rank card) 5) (= (:rank (first rest-hand)) 14)))
+        (if (= (count rest-hand) 1)
+          true
+          (recur (first rest-hand) (rest rest-hand)))
+        false))))
 
 (defn flush? [hand]
-  (-> (reduce (fn [[bool last] curr]
-                (if (and bool
-                         (= (:suit last) (:suit curr)))
-                  [true curr]
-                  [false curr]))
-              [true (first hand)]
-              (rest hand))
-      (first)))
+  (loop [card (first hand)
+         rest-hand (rest hand)]
+    (if (= (:suit card) (:suit (first rest-hand)))
+      (if (= (count rest-hand) 1)
+        true
+        (recur (first rest-hand) (rest rest-hand)))
+      false)))
 
 (defn straight-flush? [hand] (and (straight? hand) (flush? hand)))
 
