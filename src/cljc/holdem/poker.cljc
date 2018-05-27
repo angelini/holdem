@@ -1,4 +1,5 @@
-(ns holdem.poker)
+(ns holdem.poker
+  (:require [clojure.data.generators :as generators]))
 
 (defrecord Card [suit rank])
 
@@ -7,9 +8,26 @@
             (map (fn [suit] (Card. suit rank)) [:heart :spade :diamond :club]))
           (range 2 15)))
 
-(defn deal-hand [deck]
-  (->> (shuffle deck)
-       (take 5)))
+(defn hand-order [players dealer]
+  (concat
+   (map (fn [i] [:hand i])
+        (map #(mod % players) (range dealer (+ dealer players))))
+   (map (fn [i] [:hand i])
+        (map #(mod % players) (range dealer (+ dealer players))))
+   [[:burn nil]
+    [:board 0]
+    [:board 1]
+    [:board 2]
+    [:burn nil]
+    [:board 3]
+    [:burn nil]
+    [:board 4]]))
+
+(defn deal-hand [seed players dealer]
+  (binding [generators/*rnd* (java.util.Random. seed)]
+    (map conj
+         (hand-order players dealer)
+         (generators/shuffle deck))))
 
 (defn straight? [hand]
   (let [sorted (sort-by :rank hand)]

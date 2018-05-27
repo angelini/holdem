@@ -1,7 +1,7 @@
 (defproject holdem "0.1.0-SNAPSHOT"
 
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "Texas Hold'em Web App"
+  :url "https://github.com/angelini/holdem"
 
   :dependencies [[clj-time "0.14.3"]
                  [compojure "1.6.1"]
@@ -18,6 +18,7 @@
                  [mount "0.1.12"]
                  [org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
+                 [org.clojure/data.generators "0.1.2"]
                  [org.clojure/tools.cli "0.3.6"]
                  [org.clojure/tools.logging "0.4.0"]
                  [org.postgresql/postgresql "42.2.2"]
@@ -30,7 +31,7 @@
                  [selmer "1.11.7"]]
 
   :min-lein-version "2.0.0"
-  
+
   :source-paths ["src/clj" "src/cljs" "src/cljc"]
   :test-paths ["test/clj"]
   :resource-paths ["resources" "target/cljsbuild"]
@@ -46,7 +47,7 @@
    :nrepl-port 7002
    :css-dirs ["resources/public/css"]
    :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
-  
+
 
   :profiles
   {:uberjar {:omit-source true
@@ -63,8 +64,8 @@
                  :pretty-print false
                  :closure-warnings
                  {:externs-validation :off :non-standard-jsdoc :off}}}}}
-             
-             
+
+
              :aot :all
              :uberjar-name "holdem.jar"
              :source-paths ["env/prod/clj"]
@@ -100,9 +101,9 @@
                       :source-map true
                       :optimizations :none
                       :pretty-print true}}}}
-                  
-                  
-                  
+
+
+
                   :doo {:build "test"}
                   :source-paths ["env/dev/clj"]
                   :resource-paths ["env/dev/resources"]
@@ -120,7 +121,7 @@
                       :main "holdem.doo-runner"
                       :optimizations :whitespace
                       :pretty-print true}}}}
-                  
+
                   }
    :profiles/dev {}
    :profiles/test {}})
