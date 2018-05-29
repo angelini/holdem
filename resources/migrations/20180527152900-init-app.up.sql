@@ -36,7 +36,7 @@ CREATE TABLE cards (
         );
 
 CREATE TYPE player_action
-    AS ENUM ('bet', 'fold', 'raise', 'call', 'all_in', 'check');
+    AS ENUM ('small' 'big' 'bet', 'fold', 'check', 'call', 'raise', 'all');
 
 CREATE TYPE phase
     AS ENUM ('pre', 'flop', 'turn', 'river');

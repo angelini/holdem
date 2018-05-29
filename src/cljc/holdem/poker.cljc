@@ -119,7 +119,7 @@
                   (group-ranks pairs right)))}
    {:check pairs?
     :cmp-equal (partial cmp-group-ranks pairs)}
-   {:check (fn [hand] true)
+   {:check (constantly true)
     :cmp-equal cmp-sorted-ranks}
    ])
 
