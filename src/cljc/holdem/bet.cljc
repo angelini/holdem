@@ -15,23 +15,43 @@
          history []]
     (let [seat (get seats seat-idx)
           next-seat-idx (if (= seat-idx (dec (count seats)))
-                          0 (inc seat-idx))]
+                          0 (inc seat-idx))
+          [action-type action-val] (get (:actions seat) rotation-idx)]
       (if (= (count (:actions seat)) rotation-idx)
         [history seat]
         (recur (if (= next-seat-idx 0)
                  (inc rotation-idx) rotation-idx)
                next-seat-idx
                (conj history
-                     (get (:actions seat) rotation-idx)))))))
+                     {:player (:player seat)
+                      :action-type action-type
+                      :action-val action-val}))))))
 
-(defn pot-size [history]
+(defn sum-bets [history]
+  (reduce +
+          0
+          (map #(or (:action-val %) 0) history)))
+
+(defn amount-to-call [history player]
+  (let [player-sums (->> history
+                         (group-by :player)
+                         (map (fn [[player actions]]
+                                [player (sum-bets actions)]))
+                         (into {}))
+        highest-bet (apply max (vals player-sums))]
+    (- highest-bet
+       (get player-sums player 0))))
+
+(defn find-last-val-by-type [type history]
   (->> history
-       (map #(or (get % 1) 0))
-       +))
+       (filter #(= (:action-type %) type))
+       (map :action-val)
+       last))
 
-(defn bet-size [history]
-  ;; todo
-  0)
+(defn minimum-raise [history]
+  (or (find-last-val-by-type :raise history)
+      (find-last-val-by-type :bet history)
+      (find-last-val-by-type :big history)))
 
 (def state-transitions
   {nil    #{:bet :check :all}
@@ -45,19 +65,21 @@
    :all   #{:fold :call :raise :all}
    })
 
-(def action-test
-  {:bet (fn [history seat]
-          (> (:chips seat) 0))
-   :fold (constantly true)
-   :check (constantly true)
-   :call (fn [history seat]
-           (> (:chips seat) (bet-size history)))
-   :raise (fn [history seat]
-            (> (:chips seat) (bet-size history)))
-   :all (fn [history seat]
-          (> (:chips seat) 0))
-   })
+(defn action-minimum-fn [type]
+  (get {:bet (fn [_ _ big] big)
+        :fold (constantly 0)
+        :check (constantly 0)
+        :call (fn [history {chips :chips player :player} _]
+                (amount-to-call history player))
+        :raise (fn [history {chips :chips player :player} _]
+                 (+ (amount-to-call history player)
+                    (minimum-raise history)))
+        :all (constantly 0)
+        }
+       type))
 
-(defn possible-actions [history seat]
-  (->> (get state-transitions (get (last history) 0))
-       (filter #((get action-test %) history seat))))
+(defn possible-actions [history seat big]
+  (->> (get state-transitions (:action-type (last history)))
+       (map (fn [action-type]
+              [action-type ((action-minimum-fn action-type) history seat big)]))
+       (filter #(>= (:chips seat) (get % 1)))))
