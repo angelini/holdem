@@ -1,5 +1,5 @@
 DROP TABLE IF EXISTS
-    seats CASCADE;
+    stacks CASCADE;
 
 DROP TABLE IF EXISTS
     actions CASCADE;
@@ -23,7 +23,10 @@ DROP TABLE IF EXISTS
     hands CASCADE;
 
 DROP TABLE IF EXISTS
-    players CASCADE;
+    seats CASCADE;
 
 DROP TABLE IF EXISTS
     games CASCADE;
+
+DROP TABLE IF EXISTS
+    players CASCADE;

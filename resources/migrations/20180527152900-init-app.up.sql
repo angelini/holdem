@@ -1,3 +1,9 @@
+CREATE TABLE players (
+        id serial PRIMARY KEY,
+        username varchar NOT NULL,
+        event_time timestamp NOT NULL
+        );
+
 CREATE TABLE games (
         id serial PRIMARY KEY,
         table_size integer NOT NULL CHECK (table_size >= 1 AND table_size <= 10),
@@ -6,9 +12,10 @@ CREATE TABLE games (
         event_time timestamp NOT NULL
         );
 
-CREATE TABLE players (
-        id serial PRIMARY KEY,
-        username varchar NOT NULL,
+CREATE TABLE seats (
+        game_id integer REFERENCES games(id) NOT NULL,
+        player_id integer REFERENCES players(id),
+        seat_number smallint NOT NULL CHECK (seat_number >= 0),
         event_time timestamp NOT NULL
         );
 
@@ -54,9 +61,9 @@ CREATE TABLE actions (
         PRIMARY KEY (hand_id, idx)
         );
 
-CREATE TABLE seats (
+CREATE TABLE stacks (
         game_id integer REFERENCES games(id) NOT NULL,
-        player_id integer REFERENCES players(id),
-        seat_number smallint NOT NULL CHECK (seat_number >= 0),
+        player_id integer REFERENCES players(id) NOT NULL,
+        delta integer NOT NULL,
         event_time timestamp NOT NULL
         );

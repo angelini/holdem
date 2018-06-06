@@ -27,7 +27,7 @@
 
 (def seat-assignment-order [0 5 2 7 3 8 4 9 6 1])
 
-(defn add-player [game player]
+(defn add-player [game player stack]
   (let [seated (db/seated-players {:game-id game})
         filled-seats (set (map :seat_number seated))
         already-seated? (contains?
@@ -36,11 +36,15 @@
                   (filter #(not (contains? filled-seats %)))
                   first)]
     (when (and (not already-seated?) seat)
-      (-> {:game-id game
-           :player-id player
-           :seat-number seat}
-          db/add-player!
-          :seat_number))))
+      (conman/with-transaction [db/*db*]
+        (db/insert-stack-delta {:game-id game
+                                :player-id player
+                                :delta stack})
+        (-> {:game-id game
+             :player-id player
+             :seat-number seat}
+            db/add-player!
+            :seat_number)))))
 
 (defn next-filled-seat [seats player]
   (loop [seen false
@@ -74,6 +78,10 @@
                       db/start-hand!
                       :id)
           hand (poker/deal-hand seed player-order)]
+      (db/insert-small-blind-delta {:game-id game
+                                    :player-id (first player-order)})
+      (db/insert-big-blind-delta {:game-id game
+                                  :player-id (second player-order)})
       (doall
        (for [[deal-to id-or-idx card] hand]
          (db/insert-card! {:hand-id hand-id
@@ -91,6 +99,6 @@
   (let [foo (create-player "foo")
         bar (create-player "bar")
         game (start-game 10 2 4)
-        foo-seat (add-player game foo)
-        bar-seat (add-player game bar)]
+        foo-seat (add-player game foo 200)
+        bar-seat (add-player game bar 300)]
     (start-hand game)))
