@@ -58,3 +58,15 @@
   (sql-value [value] (to-pg-json value))
   IPersistentVector
   (sql-value [value] (to-pg-json value)))
+
+(defn kw->pgenum [kw]
+  (let [type (-> (namespace kw)
+                 (clojure.string/replace "-" "_"))
+        value (name kw)]
+    (doto (PGobject.)
+      (.setType type)
+      (.setValue value))))
+
+(extend-type clojure.lang.Keyword
+  jdbc/ISQLValue
+  (sql-value [kw] (kw->pgenum kw)))

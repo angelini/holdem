@@ -8,12 +8,10 @@
             (map (fn [suit] (Card. suit rank)) [:heart :spade :diamond :club]))
           (range 2 15)))
 
-(defn hand-order [players dealer]
+(defn hand-order [players]
   (concat
-   (map (fn [i] [:hand i])
-        (map #(mod % players) (range dealer (+ dealer players))))
-   (map (fn [i] [:hand i])
-        (map #(mod % players) (range dealer (+ dealer players))))
+   (map (fn [i] [:hand i]) players)
+   (map (fn [i] [:hand i]) players)
    [[:burn nil]
     [:board 0]
     [:board 1]
@@ -23,10 +21,10 @@
     [:burn nil]
     [:board 4]]))
 
-(defn deal-hand [seed players dealer]
+(defn deal-hand [seed players]
   (binding [generators/*rnd* (java.util.Random. seed)]
     (map conj
-         (hand-order players dealer)
+         (hand-order players)
          (generators/shuffle deck))))
 
 (defn straight? [hand]
