@@ -78,10 +78,12 @@
                       db/start-hand!
                       :id)
           hand (poker/deal-hand seed player-order)]
-      (db/insert-small-blind-delta {:game-id game
-                                    :player-id (first player-order)})
-      (db/insert-big-blind-delta {:game-id game
-                                  :player-id (second player-order)})
+      (db/insert-small-blind-action {:game-id game
+                                     :hand-id hand-id
+                                     :player-id (first player-order)})
+      (db/insert-big-blind-action {:game-id game
+                                   :hand-id hand-id
+                                   :player-id (second player-order)})
       (doall
        (for [[deal-to id-or-idx card] hand]
          (db/insert-card! {:hand-id hand-id
@@ -91,7 +93,25 @@
                            :card-suit (keyword "card-suit" (name (:suit card)))
                            :card-rank (:rank card)}))))))
 
-(defn next-action [hand])
+(defn current-seats [hand]
+  (->> (db/seat-states {:hand-id hand})
+       (mapv (fn [{player :player_id
+                   stack :stack
+                   actions :player_actions
+                   amounts :amounts}]
+               (bet/->Seat
+                player
+                stack
+                (mapv (fn [action amount]
+                        [(keyword action) amount])
+                      actions amounts))))))
+
+(defn next-action [hand]
+  (let [big-blind (db/hand-big-blind {:hand-id hand})
+        [history seat] (-> (current-seats hand)
+                           bet/actions-and-next-seat)]
+    (bet/possible-actions history seat big-blind)))
+
 
 (defn insert-action [hand player seq action amount])
 

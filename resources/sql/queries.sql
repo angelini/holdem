@@ -19,7 +19,7 @@ WITH latest_events AS (
     FROM seats
     WHERE game_id = :game-id
     GROUP BY seat_number
-    )
+)
 SELECT player_id, seats.seat_number
 FROM seats
     INNER JOIN latest_events
@@ -42,6 +42,15 @@ WHERE id = (
     WHERE game_id = :game-id
 )
 
+-- :name hand-big-blind :? :1
+SELECT big_blind
+FROM games
+WHERE id = (
+    SELECT game_id
+    FROM hands
+    WHERE id = :hand-id
+)
+
 -- :name start-hand! :<! :1
 INSERT INTO hands (game_id, seed, players, event_time)
     VALUES (:game-id, :seed, :players, now())
@@ -53,25 +62,42 @@ INSERT INTO cards (hand_id, player_id, board_idx, deal_to, card_suit, card_rank,
     RETURNING id
 
 -- :name insert-action! :<! :1
-INSERT INTO actions (hand_id, player_id, idx, player_action, amount, event_time)
-    VALUES (:hand-id, :player-id, :idx, :action, :amount, now())
+INSERT INTO actions (hand_id, idx, phase, player_id, player_action, amount, event_time)
+    VALUES (:hand-id, :idx, :phase, :player-id, :action, :amount, now())
     RETURNING idx
 
+-- :name insert-small-blind-action :! :n
+INSERT INTO actions (hand_id, idx, phase, player_id, player_action, amount, event_time)
+    VALUES (:hand-id, 0, 'pre', :player-id, 'small', (SELECT small_blind FROM games WHERE id = :game-id), now())
+
+-- :name insert-big-blind-action :! :n
+INSERT INTO actions (hand_id, idx, phase, player_id, player_action, amount, event_time)
+    VALUES (:hand-id, 1, 'pre', :player-id, 'big', (SELECT big_blind FROM games WHERE id = :game-id), now())
+
 -- :name players-total-stack :? :1
-SELECT SUM(delta)
+SELECT sum(delta)
 FROM stacks
 WHERE game_id = :game-id
     AND player_id = :player-id
-GROUP BY game_id, player_id
 
 -- :name insert-stack-delta :! :n
 INSERT INTO stacks (game_id, player_id, delta, event_time)
     VALUES (:game-id, :player-id, :delta, now())
 
--- :name insert-small-blind-delta :! :n
-INSERT INTO stacks (game_id, player_id, delta, event_time)
-    VALUES (:game-id, :player-id, -1 * (SELECT small_blind FROM games WHERE id = :game-id), now())
-
--- :name insert-big-blind-delta :! :n
-INSERT INTO stacks (game_id, player_id, delta, event_time)
-    VALUES (:game-id, :player-id, -1 * (SELECT big_blind FROM games WHERE id = :game-id), now())
+-- :name seat-states :? :*
+WITH current_stacks AS (
+    SELECT player_id, sum(delta) AS stack
+    FROM stacks
+    WHERE game_id = (
+        SELECT game_id
+        FROM hands
+        WHERE id = :hand-id
+    )
+    GROUP BY player_id
+)
+SELECT actions.player_id, stack, array_agg(player_action) AS player_actions, array_agg(amount) AS amounts
+FROM actions
+    INNER JOIN current_stacks
+    ON actions.player_id = current_stacks.player_id
+WHERE hand_id = :hand-id
+GROUP BY actions.player_id, current_stacks.stack
