@@ -56,7 +56,7 @@ CREATE TABLE actions (
 
 CREATE TABLE seats (
         game_id integer REFERENCES games(id) NOT NULL,
-        player_id integer REFERENCES players(id) NOT NULL,
+        player_id integer REFERENCES players(id),
         seat_number smallint NOT NULL CHECK (seat_number >= 0),
         event_time timestamp NOT NULL
         );

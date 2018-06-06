@@ -14,10 +14,19 @@ INSERT INTO games (table_size, small_blind, big_blind, event_time)
     RETURNING id
 
 -- :name seated-players :? :*
-SELECT player_id, seat_number
+WITH latest_events AS (
+    SELECT seat_number, MAX(event_time) AS event_time
+    FROM seats
+    WHERE game_id = :game-id
+    GROUP BY seat_number
+    )
+SELECT player_id, seats.seat_number
 FROM seats
-WHERE game_id = :game-id
-ORDER BY seat_number
+    INNER JOIN latest_events
+    ON seats.seat_number = latest_events.seat_number
+    AND seats.event_time = latest_events.event_time
+WHERE player_id IS NOT NULL
+ORDER BY seats.seat_number
 
 -- :name add-player! :<! :1
 INSERT INTO seats (game_id, player_id, seat_number, event_time)
