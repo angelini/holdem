@@ -1,7 +1,7 @@
 (ns holdem.handler
-  (:require 
+  (:require
             [holdem.layout :refer [error-page]]
-            [holdem.routes.home :refer [home-routes]]
+            [holdem.routes.game :refer [game-routes]]
             [compojure.core :refer [routes wrap-routes]]
             [compojure.route :as route]
             [holdem.env :refer [defaults]]
@@ -16,11 +16,10 @@
   :start
   (middleware/wrap-base
     (routes
-      (-> #'home-routes
-          (wrap-routes middleware/wrap-csrf)
-          (wrap-routes middleware/wrap-formats))
-          (route/not-found
-             (:body
-               (error-page {:status 404
-                            :title "page not found"}))))))
-
+     (-> #'game-routes
+         (wrap-routes middleware/wrap-csrf)
+         (wrap-routes middleware/wrap-formats))
+     (route/not-found
+      (:body
+       (error-page {:status 404
+                    :title "page not found"}))))))

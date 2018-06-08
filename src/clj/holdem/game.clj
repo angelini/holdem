@@ -93,25 +93,69 @@
                            :card-suit (keyword "card-suit" (name (:suit card)))
                            :card-rank (:rank card)}))))))
 
-(defn current-seats [hand]
-  (->> (db/seat-states {:hand-id hand})
-       (mapv (fn [{player :player_id
-                   stack :stack
+(defn seat-states [db-state]
+  (mapv (fn [{player :player_id
+              stack :stack
+              actions :player_actions
+              amounts :amounts}]
+          (bet/->Seat
+           player
+           stack
+           (mapv (fn [action amount]
+                   [(keyword action) amount])
+                 actions amounts)))
+        db-state))
+
+(defn hole-cards [db-state]
+  (into {}
+        (map (fn [{player :player_id
+                   suits :card_suits
+                   ranks :card_ranks}]
+               [player [(poker/->Card (keyword (first suits))
+                                      (first ranks))
+                        (poker/->Card (keyword (second suits))
+                                      (second ranks))]])
+             db-state)))
+
+(defn stacks [db-state]
+  (into {}
+        (map (fn [{player :player_id
+                   stack :stack}]
+               [player stack])
+             db-state)))
+
+(defn board [hand]
+  (->> (db/board {:hand-id hand})
+       (mapv (fn [{suit :card_suit
+                   rank :card_rank}]
+               (poker/->Card (keyword suit) rank)))))
+
+(defn state [game]
+  (let [{hand :hand_id
+         big-blind :big_blind} (db/current-hand-and-big-blind
+                                {:game-id game})
+        db-state (db/game-state {:game-id game
+                              :hand-id hand})
+        seats (seat-states db-state)
+        [history next-seat] (bet/actions-and-next-seat seats)
+        possible (bet/possible-actions history next-seat big-blind)]
+    {:next-player (:player next-seat)
+     :possible-actions possible
+     :phase :pre
+     :board (board hand)
+     :hole-cards (hole-cards db-state)
+     :stacks (stacks db-state)}))
+
+(defn logs [game]
+  (->> (db/logs {:game-id game})
+       (mapv (fn [{hand :hand_id
+                   players :player_ids
                    actions :player_actions
                    amounts :amounts}]
-               (bet/->Seat
-                player
-                stack
-                (mapv (fn [action amount]
-                        [(keyword action) amount])
-                      actions amounts))))))
-
-(defn next-action [hand]
-  (let [big-blind (db/hand-big-blind {:hand-id hand})
-        [history seat] (-> (current-seats hand)
-                           bet/actions-and-next-seat)]
-    (bet/possible-actions history seat big-blind)))
-
+               {:hand-id hand
+                :actions (mapv (fn [player action amount]
+                                 [player (keyword action) amount])
+                               players actions amounts)}))))
 
 (defn insert-action [hand player seq action amount])
 
