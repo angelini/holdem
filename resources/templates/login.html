@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+  <form action="/login" method="post">
+    <div class="row">
+      <input name="username" placeholder="Username" autocomplete="username" />
+      <input name="password" placeholder="Password" type="password" autocomplete="current-password" />
+      <input name="__anti-forgery-token" value="{{ csrf-token }}" hidden />
+      <input type="submit" value="Login" />
+    </div>
+  </form>
+</div>
+{% endblock %}

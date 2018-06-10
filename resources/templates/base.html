@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Hold'em</title>
+  </head>
+  <body>
+    <div id="app">
+      {% block content %}
+      {% endblock %}
+    </div>
+
+    <!-- scripts and styles -->
+    {% style "/assets/bootstrap/css/bootstrap.min.css" %}
+    {% style "/assets/font-awesome/web-fonts-with-css/css/fontawesome-all.min.css" %}
+    {% style "/css/screen.css" %}
+
+    {% script "/assets/jquery/jquery.min.js" %}
+    {% script "/assets/font-awesome/svg-with-js/js/fontawesome.min.js" %}
+    {% script "/assets/tether/dist/js/tether.min.js" %}
+    {% script "/assets/bootstrap/js/bootstrap.min.js" %}
+
+    <script type="text/javascript">
+        var csrfToken = "{{csrf-token}}";
+    </script>
+    {% block scripts %}
+    {% endblock %}
+  </body>
+</html>

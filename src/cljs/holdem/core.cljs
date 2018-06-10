@@ -37,7 +37,8 @@
 (defn player [seat-number]
   (let [player (get-in @state [:seat-numbers seat-number])
         stack (get-in @state [:stacks player] "Open")]
-    [:span stack]))
+    [:span {:class [(when (= player (:current-player @state)) "text-primary")
+                    (when (= player (:next-player @state)) "border border-primary")]} stack]))
 
 (defn players []
   [:div.players
@@ -63,7 +64,7 @@
     [:div.col] [:div.col]]])
 
 (defn action [[action-kw minimum] key]
-  [:div.action.row
+  [:div.action.row {:key key}
    [:button.col (name action-kw)]
    (if (not= minimum 0)
      [:input.col {:placeholder minimum}]
@@ -86,7 +87,8 @@
     [:div.container
      (board)
      (players)
-     (hand 1)]))
+     (when (:current-player @state)
+       (hand (:current-player @state)))]))
 
 (defn init! []
   (reagent/render [#'home]

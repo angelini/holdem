@@ -1,11 +1,11 @@
--- :name username-exists :? :1
-SELECT id
+-- :name player-id-and-hash :? :1
+SELECT id, password_hash
 FROM players
 WHERE username = :username
 
 -- :name create-player! :<! :1
-INSERT INTO players (username, event_time)
-    VALUES (:username, now())
+INSERT INTO players (username, password_hash, event_time)
+    VALUES (:username, :password-hash, now())
     RETURNING id
 
 -- :name start-game! :<! :1

@@ -1,6 +1,7 @@
 CREATE TABLE players (
         id serial PRIMARY KEY,
         username varchar NOT NULL,
+        password_hash varchar NOT NULL,
         event_time timestamp NOT NULL
         );
 

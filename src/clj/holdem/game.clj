@@ -1,13 +1,15 @@
 (ns holdem.game
-  (:require [clojure.data.generators :as generators]
+  (:require [buddy.hashers :as hashers]
+            [clojure.data.generators :as generators]
             [conman.core :as conman]
             [holdem.bet :as bet]
             [holdem.poker :as poker]
             [holdem.db.core :as db]))
 
-(defn create-player [username]
-  (when (nil? (db/username-exists {:username username}))
-    (-> {:username username}
+(defn create-player [username password]
+  (when (nil? (db/player-id-and-hash {:username username}))
+    (-> {:username username
+         :password-hash (hashers/encrypt password)}
         db/create-player!
         :id)))
 
@@ -143,7 +145,7 @@
                            seat-number :seat_number}]
                        [seat-number player])))))
 
-(defn state [game]
+(defn state [game player]
   (let [{hand :hand_id
          big-blind :big_blind} (db/current-hand-and-big-blind
                                 {:game-id game})
@@ -152,7 +154,8 @@
         seats (seat-states db-state)
         [history next-seat] (bet/actions-and-next-seat seats)
         possible (bet/possible-actions history next-seat big-blind)]
-    {:next-player (:player next-seat)
+    {:current-player player
+     :next-player (:player next-seat)
      :possible-actions possible
      :phase :pre
      :board (board hand)
@@ -174,8 +177,8 @@
 (defn insert-action [hand player seq action amount])
 
 (defn example-game []
-  (let [foo (create-player "foo")
-        bar (create-player "bar")
+  (let [foo (create-player "foo" "foo")
+        bar (create-player "bar" "bar")
         game (start-game 10 2 4)
         foo-seat (add-player game foo 200)
         bar-seat (add-player game bar 300)]

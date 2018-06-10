@@ -3,7 +3,8 @@
   :description "Texas Hold'em Web App"
   :url "https://github.com/angelini/holdem"
 
-  :dependencies [[clj-time "0.14.3"]
+  :dependencies [[buddy "2.0.0"]
+                 [clj-time "0.14.3"]
                  [cljs-ajax "0.5.2"]
                  [compojure "1.6.1"]
                  [conman "0.7.8"]
