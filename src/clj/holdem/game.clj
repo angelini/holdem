@@ -145,6 +145,25 @@
                            seat-number :seat_number}]
                        [seat-number player])))))
 
+(defn hide-cards [player state]
+  (let [shown-board (get {:pre #{}
+                          :flop #{0 1 2}
+                          :turn #{0 1 2 3}
+                          :river #{0 1 2 3 4}}
+                         (:phase state))]
+    (-> state
+        (assoc :board (map-indexed (fn [idx card]
+                                     (if (shown-board idx)
+                                       card
+                                       :hidden))
+                                   (:board state)))
+        (assoc :hole-cards (into {}
+                               (map (fn [[id cards]]
+                                      (if (= id player)
+                                        [id cards]
+                                        [id [:hidden :hidden]]))
+                                    (:hole-cards state)))))))
+
 (defn state [game player]
   (let [{hand :hand_id
          big-blind :big_blind} (db/current-hand-and-big-blind
@@ -154,14 +173,15 @@
         seats (seat-states db-state)
         [history next-seat] (bet/actions-and-next-seat seats)
         possible (bet/possible-actions history next-seat big-blind)]
-    {:current-player player
-     :next-player (:player next-seat)
-     :possible-actions possible
-     :phase :pre
-     :board (board hand)
-     :hole-cards (hole-cards db-state)
-     :stacks (stacks db-state)
-     :seat-numbers (seat-numbers game)}))
+    (hide-cards player
+                {:current-player player
+                 :next-player (:player next-seat)
+                 :possible-actions possible
+                 :phase :pre
+                 :board (board hand)
+                 :hole-cards (hole-cards db-state)
+                 :stacks (stacks db-state)
+                 :seat-numbers (seat-numbers game)})))
 
 (defn logs [game]
   (->> (db/logs {:game-id game})

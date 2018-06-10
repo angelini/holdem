@@ -12,21 +12,23 @@
        {:headers {"Accept" "application/transit+json"}
         :handler #(reset! state %)}))
 
-(defn card [{rank :rank suit :suit} key]
+(defn card [c key]
   [:div.card.col {:key key}
-   [:div {:class (when (#{:heart :diamond} suit) "text-danger")}
-    [:div.rank
-     (if (> rank 10)
-       (get {11 "Jack"
-             12 "Queen"
-             13 "King"
-             14 "Ace"} rank)
-       rank)]
-    [:div.suit
-     (get {:heart "♥"
-           :spade "♠"
-           :diamond "♦"
-           :club "♣"} suit)]]])
+   (if (= c :hidden)
+     [:div "Hidden"]
+     [:div {:class (when (#{:heart :diamond} suit) "text-danger")}
+      [:div.rank
+       (if (> (:rank c) 10)
+         (get {11 "Jack"
+               12 "Queen"
+               13 "King"
+               14 "Ace"} (:rank c))
+         (:rank c))]
+      [:div.suit
+       (get {:heart "♥"
+             :spade "♠"
+             :diamond "♦"
+             :club "♣"} (:suit c))]])])
 
 (defn board []
   [:div.board.row
