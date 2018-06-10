@@ -1,5 +1,6 @@
 (ns holdem.game
-  (:require [conman.core :as conman]
+  (:require [clojure.data.generators :as generators]
+            [conman.core :as conman]
             [holdem.bet :as bet]
             [holdem.poker :as poker]
             [holdem.db.core :as db]))
@@ -65,6 +66,12 @@
         (recur (next-filled-seat seats (:player_id seat))
                (conj player-order (:player_id seat)))))))
 
+(defn deal-hand [seed players]
+  (binding [generators/*rnd* (java.util.Random. seed)]
+    (map conj
+         (poker/hand-order players)
+         (generators/shuffle poker/deck))))
+
 (defn start-hand [game]
   (conman/with-transaction [db/*db*]
     (let [seed (rand-int Integer/MAX_VALUE)
@@ -77,7 +84,7 @@
                        :players player-order}
                       db/start-hand!
                       :id)
-          hand (poker/deal-hand seed player-order)]
+          hand (deal-hand seed player-order)]
       (db/insert-small-blind-action {:game-id game
                                      :hand-id hand-id
                                      :player-id (first player-order)})
@@ -130,6 +137,12 @@
                    rank :card_rank}]
                (poker/->Card (keyword suit) rank)))))
 
+(defn seat-numbers [game]
+  (into {} (->> (db/seated-players {:game-id game})
+                (map (fn [{player :player_id
+                           seat-number :seat_number}]
+                       [seat-number player])))))
+
 (defn state [game]
   (let [{hand :hand_id
          big-blind :big_blind} (db/current-hand-and-big-blind
@@ -144,7 +157,8 @@
      :phase :pre
      :board (board hand)
      :hole-cards (hole-cards db-state)
-     :stacks (stacks db-state)}))
+     :stacks (stacks db-state)
+     :seat-numbers (seat-numbers game)}))
 
 (defn logs [game]
   (->> (db/logs {:game-id game})

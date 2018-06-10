@@ -4,6 +4,7 @@
   :url "https://github.com/angelini/holdem"
 
   :dependencies [[clj-time "0.14.3"]
+                 [cljs-ajax "0.5.2"]
                  [compojure "1.6.1"]
                  [conman "0.7.8"]
                  [cprop "0.1.11"]
@@ -25,6 +26,7 @@
                  [org.webjars.bower/tether "1.4.3"]
                  [org.webjars/bootstrap "4.1.0"]
                  [org.webjars/font-awesome "5.0.10"]
+                 [reagent "0.8.1"]
                  [ring-webjars "0.2.0"]
                  [ring/ring-core "1.6.3"]
                  [ring/ring-defaults "0.3.1"]

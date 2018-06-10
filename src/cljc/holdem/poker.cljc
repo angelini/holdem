@@ -1,5 +1,4 @@
-(ns holdem.poker
-  (:require [clojure.data.generators :as generators]))
+(ns holdem.poker)
 
 (defrecord Card [suit rank])
 
@@ -20,12 +19,6 @@
     [:board 3]
     [:burn nil]
     [:board 4]]))
-
-(defn deal-hand [seed players]
-  (binding [generators/*rnd* (java.util.Random. seed)]
-    (map conj
-         (hand-order players)
-         (generators/shuffle deck))))
 
 (defn straight? [hand]
   (let [sorted (sort-by :rank hand)]

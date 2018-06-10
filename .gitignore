@@ -13,3 +13,6 @@ profiles.clj
 .nrepl-port
 /log
 /data
+figwheel_server.log
+.rebel_readline_history
+*-init.clj

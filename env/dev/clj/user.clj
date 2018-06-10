@@ -37,5 +37,3 @@
 
 (defn create-migration [name]
   (migrations/create name (select-keys env [:database-url])))
-
-

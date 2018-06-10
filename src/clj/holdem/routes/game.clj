@@ -1,6 +1,7 @@
 (ns holdem.routes.game
   (:require [compojure.core :refer [defroutes GET]]
             [holdem.game :as game]
+            [holdem.layout :as layout]
             [ring.util.http-response :as response]))
 
 "
@@ -44,5 +45,6 @@
 "
 
 (defroutes game-routes
+  (GET "/" [] (layout/render "home.html"))
   (GET "/state/:game-id" [game-id] {:body (game/state (Integer/parseInt game-id))})
   (GET "/logs/:game-id" [game-id] {:body (game/logs (Integer/parseInt game-id))}))
