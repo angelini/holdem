@@ -174,7 +174,8 @@
         [history next-seat] (bet/actions-and-next-seat seats)
         possible (bet/possible-actions history next-seat big-blind)]
     (hide-cards player
-                {:current-player player
+                {:hand-id hand
+                 :current-player player
                  :next-player (:player next-seat)
                  :possible-actions possible
                  :phase :pre
@@ -194,7 +195,12 @@
                                  [player (keyword action) amount])
                                players actions amounts)}))))
 
-(defn insert-action [hand player seq action amount])
+(defn insert-action [hand phase player action amount]
+  (:idx (db/insert-action! {:hand-id hand
+                            :phase (keyword "phase" (name phase))
+                            :player-id player
+                            :action (keyword "player-action" (name action))
+                            :amount amount})))
 
 (defn example-game []
   (let [foo (create-player "foo" "foo")

@@ -77,17 +77,17 @@ INSERT INTO cards (hand_id, player_id, board_idx, deal_to, card_suit, card_rank,
     RETURNING id
 
 -- :name insert-action! :<! :1
-INSERT INTO actions (hand_id, idx, phase, player_id, player_action, amount, event_time)
-    VALUES (:hand-id, :idx, :phase, :player-id, :action, :amount, now())
+INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, event_time)
+    VALUES (:hand-id, :phase, (SELECT max(idx) + 1 FROM actions WHERE hand_id = :hand-id), :player-id, :action, :amount, now())
     RETURNING idx
 
 -- :name insert-small-blind-action :! :n
-INSERT INTO actions (hand_id, idx, phase, player_id, player_action, amount, event_time)
-    VALUES (:hand-id, 0, 'pre', :player-id, 'small', (SELECT small_blind FROM games WHERE id = :game-id), now())
+INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, event_time)
+    VALUES (:hand-id, 'pre', 0, :player-id, 'small', (SELECT small_blind FROM games WHERE id = :game-id), now())
 
 -- :name insert-big-blind-action :! :n
-INSERT INTO actions (hand_id, idx, phase, player_id, player_action, amount, event_time)
-    VALUES (:hand-id, 1, 'pre', :player-id, 'big', (SELECT big_blind FROM games WHERE id = :game-id), now())
+INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, event_time)
+    VALUES (:hand-id, 'pre', 1, :player-id, 'big', (SELECT big_blind FROM games WHERE id = :game-id), now())
 
 -- :name players-total-stack :? :1
 SELECT sum(delta)

@@ -1,5 +1,5 @@
 (ns holdem.core
-  (:require [ajax.core :refer [GET]]
+  (:require [ajax.core :refer [GET POST]]
             [goog.string :as gstring]
             [goog.string.format]
             [reagent.core :as reagent]))
@@ -7,10 +7,18 @@
 (defonce state
   (reagent/atom nil))
 
-(defn refresh-state [game-id]
-  (GET (gstring/format "/state/%s" game-id)
+(defn refresh-state []
+  (GET (gstring/format "/games/%d/state" js/gameId)
        {:headers {"Accept" "application/transit+json"}
         :handler #(reset! state %)}))
+
+(defn post-action [action-kw amount]
+  (POST (gstring/format "/hands/%d" (:hand-id @state))
+        {:params {:action action-kw
+                  :amount amount
+                  :phase (:phase @state)}
+         :headers {"x-csrf-token" js/csrfToken}
+         :handler #(refresh-state)}))
 
 (defn card [c key]
   [:div.card.col {:key key}
@@ -67,7 +75,15 @@
 
 (defn action [[action-kw minimum] key]
   [:div.action.row {:key key}
-   [:button.col (name action-kw)]
+   [:input.col {:type "button"
+                :value (get {:bet "Bet"
+                             :fold "Fold"
+                             :check "Check"
+                             :call "Call"
+                             :raise "Raise"
+                             :all "All In"} action-kw)
+                :on-click (fn [event]
+                            (post-action action-kw minimum))}]
    (if (not= minimum 0)
      [:input.col {:placeholder minimum}]
      [:div.col])])
@@ -84,7 +100,7 @@
                      (:possible-actions @state))])]))
 
 (defn home []
-  (refresh-state 1)
+  (refresh-state)
   (fn []
     [:div.container
      (board)

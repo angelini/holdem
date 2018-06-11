@@ -18,13 +18,13 @@
              (hashers/check password password-hash))
       (let [updated-session (assoc session :identity {:username username
                                                       :player-id player-id})]
-        (-> (redirect "/")
+        (-> (redirect "/games/1")
             (assoc :session updated-session)))
       (redirect "/login"))))
 
-(defn home [request]
+(defn game-page [game-id request]
   (if (authenticated? request)
-    (layout/render "home.html")
+    (layout/render "game.html" {:game-id game-id})
     (redirect "/login")))
 
 (defn state [game-id request]
@@ -38,9 +38,21 @@
     {:body (game/logs (Integer/parseInt game-id))}
     (redirect "/login")))
 
+(defn insert-action [hand-id request]
+  (let [player (get-in request [:session :identity :player-id])
+        {action :action
+         amount :amount
+         phase :phase} (:params request)]
+    (if (authenticated? request)
+      {:body {:idx (game/insert-action (Integer/parseInt hand-id)
+                                       phase player action amount)}
+       :status 201}
+      (redirect "/login"))))
+
 (defroutes game-routes
-  (GET "/" [] home)
   (GET "/login" [] (layout/render "login.html"))
   (POST "/login" [] authenticate)
-  (GET "/state/:game-id" [game-id :as request] (state game-id request))
-  (GET "/logs/:game-id" [game-id :as request] (logs game-id request)))
+  (GET "/games/:game-id" [game-id :as request] (game-page game-id request))
+  (GET "/games/:game-id/state" [game-id :as request] (state game-id request))
+  (GET "/games/:game-id/logs" [game-id :as request] (logs game-id request))
+  (POST "/hands/:hand-id" [hand-id :as request] (insert-action hand-id request)))
