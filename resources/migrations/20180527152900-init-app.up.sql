@@ -28,6 +28,15 @@ CREATE TABLE hands (
         event_time timestamp NOT NULL
         );
 
+CREATE TYPE phase
+    AS ENUM ('pre', 'flop', 'turn', 'river');
+
+CREATE TABLE hand_phases (
+        hand_id integer REFERENCES hands(id) NOT NULL,
+        phase phase NOT NULL,
+        event_time timestamp NOT NULL
+        );
+
 CREATE TYPE deal_to
     AS ENUM ('hand', 'board', 'burn');
 
@@ -47,9 +56,6 @@ CREATE TABLE cards (
 
 CREATE TYPE player_action
     AS ENUM ('small', 'big', 'bet', 'fold', 'check', 'call', 'raise', 'all');
-
-CREATE TYPE phase
-    AS ENUM ('pre', 'flop', 'turn', 'river');
 
 CREATE TABLE actions (
         hand_id integer REFERENCES hands(id) NOT NULL,

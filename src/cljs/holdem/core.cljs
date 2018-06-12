@@ -13,7 +13,7 @@
         :handler #(reset! state %)}))
 
 (defn post-action [action-kw amount]
-  (POST (gstring/format "/hands/%d" (:hand-id @state))
+  (POST (gstring/format "/games/%d/hands/%d" js/gameId (:hand-id @state))
         {:params {:action action-kw
                   :amount amount
                   :phase (:phase @state)}

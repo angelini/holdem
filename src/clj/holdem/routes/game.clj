@@ -38,13 +38,14 @@
     {:body (game/logs (Integer/parseInt game-id))}
     (redirect "/login")))
 
-(defn insert-action [hand-id request]
+(defn insert-action [game-id hand-id request]
   (let [player (get-in request [:session :identity :player-id])
         {action :action
          amount :amount
          phase :phase} (:params request)]
     (if (authenticated? request)
-      {:body {:idx (game/insert-action (Integer/parseInt hand-id)
+      {:body {:idx (game/insert-action (Integer/parseInt game-id)
+                                       (Integer/parseInt hand-id)
                                        phase player action amount)}
        :status 201}
       (redirect "/login"))))
@@ -55,4 +56,5 @@
   (GET "/games/:game-id" [game-id :as request] (game-page game-id request))
   (GET "/games/:game-id/state" [game-id :as request] (state game-id request))
   (GET "/games/:game-id/logs" [game-id :as request] (logs game-id request))
-  (POST "/hands/:hand-id" [hand-id :as request] (insert-action hand-id request)))
+  (POST "/games/:game-id/hands/:hand-id" [game-id hand-id :as request]
+        (insert-action game-id hand-id request)))

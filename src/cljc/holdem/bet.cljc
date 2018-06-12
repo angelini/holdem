@@ -38,7 +38,9 @@
                          (map (fn [[player actions]]
                                 [player (sum-bets actions)]))
                          (into {}))
-        highest-bet (apply max (vals player-sums))]
+        highest-bet (if (empty? player-sums)
+                      0
+                      (apply max (vals player-sums)))]
     (- highest-bet
        (get player-sums player 0))))
 
@@ -53,7 +55,7 @@
       (find-last-val-by-type :bet history)
       (find-last-val-by-type :big history)))
 
-(def state-transitions
+(def transitions-last-player
   {nil    #{:bet :check :all}
    :small #{:big-blind}
    :big   #{:fold :call :raise :all}
@@ -65,6 +67,17 @@
    :all   #{:fold :call :raise :all}
    })
 
+(def transitions-current-player
+  {nil    #{:bet :check :all}
+   :small #{:fold :call :raise :all}
+   :big   #{:fold :check :call :raise :all}
+   :bet   #{:fold :check :call :raise :all}
+   :fold  #{}
+   :check #{:fold :call :raise :all}
+   :call  #{:fold :raise :all}
+   :raise #{:fold :check :call :raise :all}
+   :all   #{}})
+
 (defn action-minimum-fn [type]
   (get {:bet (fn [_ _ big] big)
         :fold (constantly 0)
@@ -75,11 +88,28 @@
                  (+ (amount-to-call history player)
                     (minimum-raise history)))
         :all (constantly 0)
-        }
-       type))
+        } type))
+
+(defn last-action [history]
+  (when (not (empty? history))
+    (:action-type (last history))))
+
+(defn last-action-by-seat [{actions :actions}]
+  (when (not (empty? actions))
+    (first (last actions))))
 
 (defn possible-actions [history seat big]
-  (->> (get state-transitions (:action-type (last history)))
-       (map (fn [action-type]
-              [action-type ((action-minimum-fn action-type) history seat big)]))
-       (filter #(>= (:chips seat) (get % 1)))))
+  (let [last (last-action history)
+        last-by-seat (last-action-by-seat seat)
+        to-call (amount-to-call history (:player seat))]
+    (if (and (#{:check :call :raise} last-by-seat)
+             (= 0 to-call))
+      '()
+      (->> (get transitions-last-player last)
+           (filter #((get transitions-current-player last-by-seat) %))
+           (filter (fn [action-type]
+                     (not (and (= :call action-type)
+                               (= 0 to-call)))))
+           (map (fn [action-type]
+                  [action-type ((action-minimum-fn action-type) history seat big)]))
+           (filter #(>= (:chips seat) (get % 1)))))))

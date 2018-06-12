@@ -64,6 +64,20 @@ INSERT INTO hands (game_id, seed, players, event_time)
     VALUES (:game-id, :seed, :players, now())
     RETURNING id
 
+-- :name current-phase :? :1
+SELECT phase
+FROM hand_phases
+WHERE hand_id = :hand-id
+    AND event_time = (
+    SELECT max(event_time)
+    FROM hand_phases
+    WHERE hand_id = :hand-id
+)
+
+-- :name start-next-phase! :! :n
+INSERT INTO hand_phases (hand_id, phase, event_time)
+    VALUES (:hand-id, :phase, now())
+
 -- :name board :? :*
 SELECT card_suit, card_rank
 FROM cards
@@ -81,11 +95,11 @@ INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, even
     VALUES (:hand-id, :phase, (SELECT max(idx) + 1 FROM actions WHERE hand_id = :hand-id), :player-id, :action, :amount, now())
     RETURNING idx
 
--- :name insert-small-blind-action :! :n
+-- :name insert-small-blind-action! :! :n
 INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, event_time)
     VALUES (:hand-id, 'pre', 0, :player-id, 'small', (SELECT small_blind FROM games WHERE id = :game-id), now())
 
--- :name insert-big-blind-action :! :n
+-- :name insert-big-blind-action! :! :n
 INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, event_time)
     VALUES (:hand-id, 'pre', 1, :player-id, 'big', (SELECT big_blind FROM games WHERE id = :game-id), now())
 
@@ -109,6 +123,7 @@ WITH player_stacks AS (
     SELECT player_id, array_agg(player_action) AS player_actions, array_agg(amount) AS amounts
     FROM actions
     WHERE hand_id = :hand-id
+        AND phase = :phase
     GROUP BY player_id
 ), player_cards AS (
     SELECT player_id, array_agg(card_suit) AS card_suits, array_agg(card_rank) AS card_ranks
@@ -118,7 +133,7 @@ WITH player_stacks AS (
 )
 SELECT s.player_id, s.stack, a.player_actions, a.amounts, c.card_suits, c.card_ranks
 FROM player_stacks s
-    INNER JOIN player_actions_amounts a
+    LEFT JOIN player_actions_amounts a
     ON s.player_id = a.player_id
     INNER JOIN player_cards c
     ON s.player_id = c.player_id
