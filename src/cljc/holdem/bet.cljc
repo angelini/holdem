@@ -50,10 +50,10 @@
        (map :action-val)
        last))
 
-(defn minimum-raise [history]
+(defn minimum-raise [history big]
   (or (find-last-val-by-type :raise history)
       (find-last-val-by-type :bet history)
-      (find-last-val-by-type :big history)))
+      big))
 
 (def transitions-last-player
   {nil    #{:bet :check :all}
@@ -61,14 +61,14 @@
    :big   #{:fold :call :raise :all}
    :bet   #{:fold :call :raise :all}
    :fold  #{:fold :check :call :raise :all}
-   :check #{:fold :call :raise :all}
+   :check #{:bet :fold :check :call :raise :all}
    :call  #{:fold :check :call :raise :all}
    :raise #{:fold :call :raise :all}
    :all   #{:fold :call :raise :all}
    })
 
 (def transitions-current-player
-  {nil    #{:bet :check :all}
+  {nil    #{:bet :check :call :raise :all}
    :small #{:fold :call :raise :all}
    :big   #{:fold :check :call :raise :all}
    :bet   #{:fold :check :call :raise :all}
@@ -84,9 +84,9 @@
         :check (constantly 0)
         :call (fn [history {chips :chips player :player} _]
                 (amount-to-call history player))
-        :raise (fn [history {chips :chips player :player} _]
+        :raise (fn [history {chips :chips player :player} big]
                  (+ (amount-to-call history player)
-                    (minimum-raise history)))
+                    (minimum-raise history big)))
         :all (constantly 0)
         } type))
 
