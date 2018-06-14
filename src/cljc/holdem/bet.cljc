@@ -32,17 +32,20 @@
           0
           (map #(or (:action-val %) 0) history)))
 
+(defn committed-by-player [history]
+  (->> history
+       (group-by :player)
+       (map (fn [[player actions]]
+              [player (sum-bets actions)]))
+       (into {})))
+
 (defn amount-to-call [history player]
-  (let [player-sums (->> history
-                         (group-by :player)
-                         (map (fn [[player actions]]
-                                [player (sum-bets actions)]))
-                         (into {}))
-        highest-bet (if (empty? player-sums)
+  (let [committed (committed-by-player history)
+        highest-bet (if (empty? committed)
                       0
-                      (apply max (vals player-sums)))]
+                      (apply max (vals committed)))]
     (- highest-bet
-       (get player-sums player 0))))
+       (get committed player 0))))
 
 (defn find-last-val-by-type [type history]
   (->> history
@@ -102,7 +105,7 @@
   (let [last (last-action history)
         last-by-seat (last-action-by-seat seat)
         to-call (amount-to-call history (:player seat))]
-    (if (and (#{:check :call :raise} last-by-seat)
+    (if (and (#{:bet :check :call :raise} last-by-seat)
              (= 0 to-call))
       '()
       (->> (get transitions-last-player last)
@@ -113,3 +116,11 @@
            (map (fn [action-type]
                   [action-type ((action-minimum-fn action-type) history seat big)]))
            (filter #(>= (:chips seat) (get % 1)))))))
+
+(defn pots [committed]
+  (let [groups (->> committed
+                    (group-by second))
+        amounts (-> groups keys sort)]
+    (->> amounts
+         (map (fn [amount] [amount (mapv first
+                                         (get groups amount))])))))

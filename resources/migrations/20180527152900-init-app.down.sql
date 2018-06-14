@@ -17,7 +17,7 @@ DROP TYPE IF EXISTS
     card_suit CASCADE;
 
 DROP TABLE IF EXISTS
-    hand_phases CASCADE;
+    pots CASCADE;
 
 DROP TYPE IF EXISTS
     phase CASCADE;

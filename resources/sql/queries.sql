@@ -64,19 +64,16 @@ INSERT INTO hands (game_id, seed, players, event_time)
     VALUES (:game-id, :seed, :players, now())
     RETURNING id
 
--- :name current-phase :? :1
-SELECT phase
-FROM hand_phases
+-- :name current-pots :? :*
+SELECT players, sum(amount) AS amount, max(phase) AS phase
+FROM pots
 WHERE hand_id = :hand-id
-    AND event_time = (
-    SELECT max(event_time)
-    FROM hand_phases
-    WHERE hand_id = :hand-id
-)
+GROUP BY players
 
--- :name start-next-phase! :! :n
-INSERT INTO hand_phases (hand_id, phase, event_time)
-    VALUES (:hand-id, :phase, now())
+-- :name insert-pot! :<! :1
+INSERT INTO pots (hand_id, phase, amount, players, event_time)
+    VALUES (:hand-id, :phase, :amount, :players, now())
+    RETURNING id
 
 -- :name board :? :*
 SELECT card_suit, card_rank
@@ -109,7 +106,7 @@ FROM stacks
 WHERE game_id = :game-id
     AND player_id = :player-id
 
--- :name insert-stack-delta :! :n
+-- :name insert-stack-delta! :! :n
 INSERT INTO stacks (game_id, player_id, delta, event_time)
     VALUES (:game-id, :player-id, :delta, now())
 

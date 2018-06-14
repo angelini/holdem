@@ -40,9 +40,9 @@
                   first)]
     (when (and (not already-seated?) seat)
       (conman/with-transaction [db/*db*]
-        (db/insert-stack-delta {:game-id game
-                                :player-id player
-                                :delta stack})
+        (db/insert-stack-delta! {:game-id game
+                                 :player-id player
+                                 :delta stack})
         (-> {:game-id game
              :player-id player
              :seat-number seat}
@@ -87,7 +87,6 @@
                       db/start-hand!
                       :id)
           hand (deal-hand seed player-order)]
-      (db/start-next-phase! {:hand-id hand-id :phase :phase/pre})
       (db/insert-small-blind-action! {:game-id game
                                       :hand-id hand-id
                                       :player-id (first player-order)})
@@ -146,6 +145,23 @@
                            seat-number :seat_number}]
                        [seat-number player])))))
 
+(def phase-order [:pre :flop :turn :river :finished])
+
+(defn next-phase [phase]
+  (loop [order phase-order]
+    (if (= phase (first order))
+      (second order)
+      (recur (rest order)))))
+
+(defn current-phase [pots]
+  (if (empty? pots)
+    :pre
+    (->> pots
+         (map #(keyword (:phase %)))
+         (sort-by #(.indexOf phase-order %))
+         first
+         next-phase)))
+
 (defn hide-cards [player state]
   (let [shown-board (get {:pre #{}
                           :flop #{0 1 2}
@@ -169,12 +185,11 @@
   (let [{hand :hand_id
          big-blind :big_blind} (db/current-hand-and-big-blind
                                 {:game-id game})
-        phase (->> (db/current-phase {:hand-id hand})
-                   :phase
-                   (keyword "phase"))
+        pots (db/current-pots {:hand-id hand})
+        phase (current-phase pots)
         db-state (db/game-state {:game-id game
                                  :hand-id hand
-                                 :phase phase})
+                                 :phase (keyword "phase" (name phase))})
         seats (seat-states db-state)
         [history next-seat] (bet/actions-and-next-seat seats)
         possible (bet/possible-actions history next-seat big-blind)]
@@ -187,7 +202,10 @@
                  :board (board hand)
                  :hole-cards (hole-cards db-state)
                  :stacks (stacks db-state)
-                 :seat-numbers (seat-numbers game)})))
+                 :seat-numbers (seat-numbers game)
+                 :pots (map (fn [pot] [(:amount pot) (:players pot)])
+                            pots)
+                 :committed (bet/committed-by-player history)})))
 
 (defn logs [game]
   (->> (db/logs {:game-id game})
@@ -200,13 +218,16 @@
                                  [player (keyword action) amount])
                                players actions amounts)}))))
 
-(def phase-order [:pre :flop :turn :river :finished])
-
-(defn next-phase [phase]
-  (loop [order phase-order]
-    (if (= phase (first order))
-      (second order)
-      (recur (rest order)))))
+(defn insert-committed [game hand phase player committed]
+  (doseq [[amount players] (bet/pots committed)]
+    (db/insert-pot! {:hand-id hand
+                     :phase (keyword "phase" (name phase))
+                     :amount amount
+                     :players players})
+    (doseq [player players]
+      (db/insert-stack-delta! {:game-id game
+                               :player-id player
+                               :delta (* -1 amount)}))))
 
 (defn insert-action [game hand phase player action amount]
   (conman/with-transaction [db/*db*]
@@ -220,8 +241,7 @@
       (when (empty? (:possible-actions current-state))
         (if (= next :finished)
           (start-hand game)
-          (db/start-next-phase! {:hand-id hand
-                                 :phase (keyword "phase" (name next))})))
+          (insert-committed game hand phase player (:committed current-state))))
       idx)))
 
 (defn example-game []

@@ -1,5 +1,6 @@
 (ns holdem.core
   (:require [ajax.core :refer [GET POST]]
+            [clojure.string :as string]
             [goog.string :as gstring]
             [goog.string.format]
             [reagent.core :as reagent]))
@@ -24,7 +25,7 @@
   [:div.card.col {:key key}
    (if (= c :hidden)
      [:div "Hidden"]
-     [:div {:class (when (#{:heart :diamond} suit) "text-danger")}
+     [:div {:class (when (#{:heart :diamond} (:suit c)) "text-danger")}
       [:div.rank
        (if (> (:rank c) 10)
          (get {11 "Jack"
@@ -45,10 +46,16 @@
                 (:board @state))])
 
 (defn player [seat-number]
-  (let [player (get-in @state [:seat-numbers seat-number])
-        stack (get-in @state [:stacks player] "Open")]
-    [:span {:class [(when (= player (:current-player @state)) "text-primary")
-                    (when (= player (:next-player @state)) "border border-primary")]} stack]))
+  (if (not (contains? (:seat-numbers @state) seat-number))
+    [:span "Open"]
+    (let [player (get-in @state [:seat-numbers seat-number])
+          committed (get-in @state [:committed player] 0)
+          stack (- (get-in @state [:stacks player]) committed)]
+      [:span {:class [(when (= player (:current-player @state)) "text-primary")
+                      (when (= player (:next-player @state)) "border border-primary")]}
+       (if (#{3 4 5 6 7} seat-number)
+         (string/join [(str committed) " / " stack])
+         (string/join [stack " / " (str committed)]))])))
 
 (defn players []
   [:div.players

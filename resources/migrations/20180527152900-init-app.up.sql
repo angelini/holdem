@@ -31,9 +31,12 @@ CREATE TABLE hands (
 CREATE TYPE phase
     AS ENUM ('pre', 'flop', 'turn', 'river');
 
-CREATE TABLE hand_phases (
+CREATE TABLE pots (
+        id serial PRIMARY KEY,
         hand_id integer REFERENCES hands(id) NOT NULL,
         phase phase NOT NULL,
+        amount integer NOT NULL CHECK (amount >= 0),
+        players integer[] NOT NULL,
         event_time timestamp NOT NULL
         );
 
