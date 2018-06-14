@@ -106,9 +106,17 @@ FROM stacks
 WHERE game_id = :game-id
     AND player_id = :player-id
 
+-- :name winners :? :*
+SELECT player_id, sum(delta) AS total
+FROM stacks
+WHERE hand_id = :hand-id
+    AND delta > 0
+GROUP BY player_id
+ORDER BY total
+
 -- :name insert-stack-delta! :! :n
-INSERT INTO stacks (game_id, player_id, delta, event_time)
-    VALUES (:game-id, :player-id, :delta, now())
+INSERT INTO stacks (game_id, hand_id, player_id, delta, event_time)
+    VALUES (:game-id, :hand-id, :player-id, :delta, now())
 
 -- :name game-state :? :*
 WITH player_stacks AS (

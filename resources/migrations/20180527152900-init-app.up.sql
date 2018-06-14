@@ -29,7 +29,7 @@ CREATE TABLE hands (
         );
 
 CREATE TYPE phase
-    AS ENUM ('pre', 'flop', 'turn', 'river');
+    AS ENUM ('pre', 'flop', 'turn', 'river', 'end');
 
 CREATE TABLE pots (
         id serial PRIMARY KEY,
@@ -73,6 +73,7 @@ CREATE TABLE actions (
 
 CREATE TABLE stacks (
         game_id integer REFERENCES games(id) NOT NULL,
+        hand_id integer REFERENCES hands(id),
         player_id integer REFERENCES players(id) NOT NULL,
         delta integer NOT NULL,
         event_time timestamp NOT NULL

@@ -29,13 +29,19 @@
 
 (defn state [game-id request]
   (if (authenticated? request)
-    {:body (game/state (Integer/parseInt game-id)
-                       (get-in request [:session :identity :player-id]))}
+    {:body (game/hide-cards (get-in request [:session :identity :player-id])
+                            (game/state (Integer/parseInt game-id)))}
     (redirect "/login")))
 
 (defn logs [game-id request]
   (if (authenticated? request)
     {:body (game/logs (Integer/parseInt game-id))}
+    (redirect "/login")))
+
+(defn start-hand [game-id request]
+  (if (authenticated? request)
+    {:body {:id (game/start-hand game-id)}
+     :status 201}
     (redirect "/login")))
 
 (defn insert-action [game-id hand-id request]
@@ -56,5 +62,6 @@
   (GET "/games/:game-id" [game-id :as request] (game-page game-id request))
   (GET "/games/:game-id/state" [game-id :as request] (state game-id request))
   (GET "/games/:game-id/logs" [game-id :as request] (logs game-id request))
+  (POST "/games/:game-id/hands" [game-id :as request] (start-hand game-id request))
   (POST "/games/:game-id/hands/:hand-id" [game-id hand-id :as request]
         (insert-action game-id hand-id request)))

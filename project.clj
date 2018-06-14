@@ -21,6 +21,7 @@
                  [org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [org.clojure/data.generators "0.1.2"]
+                 [org.clojure/math.combinatorics "0.1.4"]
                  [org.clojure/tools.cli "0.3.6"]
                  [org.clojure/tools.logging "0.4.0"]
                  [org.postgresql/postgresql "42.2.2"]

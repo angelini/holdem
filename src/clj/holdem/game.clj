@@ -41,6 +41,7 @@
     (when (and (not already-seated?) seat)
       (conman/with-transaction [db/*db*]
         (db/insert-stack-delta! {:game-id game
+                                 :hand-id nil
                                  :player-id player
                                  :delta stack})
         (-> {:game-id game
@@ -145,7 +146,7 @@
                            seat-number :seat_number}]
                        [seat-number player])))))
 
-(def phase-order [:pre :flop :turn :river :finished])
+(def phase-order [:pre :flop :turn :river :end])
 
 (defn next-phase [phase]
   (loop [order phase-order]
@@ -166,7 +167,8 @@
   (let [shown-board (get {:pre #{}
                           :flop #{0 1 2}
                           :turn #{0 1 2 3}
-                          :river #{0 1 2 3 4}}
+                          :river #{0 1 2 3 4}
+                          :end #{0 1 2 3 4}}
                          (:phase state))]
     (-> state
         (assoc :board (map-indexed (fn [idx card]
@@ -179,9 +181,10 @@
                                       (if (= id player)
                                         [id cards]
                                         [id [:hidden :hidden]]))
-                                    (:hole-cards state)))))))
+                                    (:hole-cards state))))
+        (assoc :current-player player))))
 
-(defn state [game player]
+(defn state [game]
   (let [{hand :hand_id
          big-blind :big_blind} (db/current-hand-and-big-blind
                                 {:game-id game})
@@ -190,22 +193,36 @@
         db-state (db/game-state {:game-id game
                                  :hand-id hand
                                  :phase (keyword "phase" (name phase))})
-        seats (seat-states db-state)
-        [history next-seat] (bet/actions-and-next-seat seats)
-        possible (bet/possible-actions history next-seat big-blind)]
-    (hide-cards player
-                {:hand-id hand
-                 :current-player player
-                 :next-player (:player next-seat)
-                 :possible-actions possible
-                 :phase (-> phase name keyword)
-                 :board (board hand)
-                 :hole-cards (hole-cards db-state)
-                 :stacks (stacks db-state)
-                 :seat-numbers (seat-numbers game)
-                 :pots (map (fn [pot] [(:amount pot) (:players pot)])
-                            pots)
-                 :committed (bet/committed-by-player history)})))
+        seats (seat-states db-state)]
+    (if (= :end phase)
+      (let [winners (db/winners {:hand-id hand})
+            winner (:player_id (last winners))]
+        {:hand-id hand
+         :next-player winner
+         :possible-actions '()
+         :phase :end
+         :board (board hand)
+         :hole-cards (hole-cards db-state)
+         :stacks (stacks db-state)
+         :seat-numbers (seat-numbers game)
+         :pots (map (fn [pot] [(:amount pot) (:players pot)])
+                    pots)
+         :committed {}
+         :winners winners})
+      (let [[history next-seat] (bet/actions-and-next-seat seats)
+            possible (bet/possible-actions history next-seat big-blind)]
+        {:hand-id hand
+         :next-player (:player next-seat)
+         :possible-actions possible
+         :phase (-> phase name keyword)
+         :board (board hand)
+         :hole-cards (hole-cards db-state)
+         :stacks (stacks db-state)
+         :seat-numbers (seat-numbers game)
+         :pots (map (fn [pot] [(:amount pot) (:players pot)])
+                    pots)
+         :committed (bet/committed-by-player history)
+         :winners (db/winners {:hand-id hand})}))))
 
 (defn logs [game]
   (->> (db/logs {:game-id game})
@@ -226,8 +243,23 @@
                      :players players})
     (doseq [player players]
       (db/insert-stack-delta! {:game-id game
+                               :hand-id hand
                                :player-id player
                                :delta (* -1 amount)}))))
+
+(defn finish-hand [game hand current-state]
+  (doseq [[amount players] (:pots current-state)]
+    (let [[winner _] (->> (:hole-cards current-state)
+                        (filter (fn [[player _]]
+                                  ((set players) player)))
+                        (map (fn [[player hole-cards]]
+                               [player (poker/best-possible-hand hole-cards (:board current-state))]))
+                        (sort-by second poker/compare-hands)
+                        last)]
+      (db/insert-stack-delta! {:game-id game
+                               :hand-id hand
+                               :player-id winner
+                               :delta (* amount (count players))}))))
 
 (defn insert-action [game hand phase player action amount]
   (conman/with-transaction [db/*db*]
@@ -236,11 +268,12 @@
                                   :player-id player
                                   :action (keyword "player-action" (name action))
                                   :amount amount})
-          current-state (state game player)
-          next (next-phase phase)]
+          current-state (state game)]
       (when (empty? (:possible-actions current-state))
-        (if (= next :finished)
-          (start-hand game)
+        (if (= (next-phase phase) :end)
+          (do
+            (insert-committed game hand phase player (:committed current-state))
+            (finish-hand game hand current-state))
           (insert-committed game hand phase player (:committed current-state))))
       idx)))
 

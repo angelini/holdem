@@ -1,4 +1,5 @@
-(ns holdem.poker)
+(ns holdem.poker
+  (:require [clojure.math.combinatorics :as combo]))
 
 (defrecord Card [suit rank])
 
@@ -124,3 +125,9 @@
       [false true] -1
       [false false] (recur (first rest-categories)
                            (rest rest-categories)))))
+
+(defn best-possible-hand [hole-cards board]
+  (->> (combo/combinations board 3)
+       (map #(concat hole-cards %))
+       (sort compare-hands)
+       last))
