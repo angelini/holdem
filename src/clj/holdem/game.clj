@@ -103,18 +103,20 @@
                            :card-suit (keyword "card-suit" (name (:suit card)))
                            :card-rank (:rank card)}))))))
 
-(defn seat-states [db-state]
-  (mapv (fn [{player :player_id
-              stack :stack
-              actions :player_actions
-              amounts :amounts}]
-          (bet/->Seat
-           player
-           stack
-           (mapv (fn [action amount]
-                   [(keyword action) amount])
-                 actions amounts)))
-        db-state))
+(defn seat-states [db-state player-order]
+  (->> db-state
+       (map (fn [{player :player_id
+                  stack :stack
+                  actions :player_actions
+                  amounts :amounts}]
+              (bet/->Seat
+               player
+               stack
+               (mapv (fn [action amount]
+                       [(keyword action) amount])
+                     actions amounts))))
+       (sort-by #(.indexOf player-order (:player %)))
+       vec))
 
 (defn hole-cards [db-state]
   (into {}
@@ -143,8 +145,10 @@
 (defn seat-numbers [game]
   (into {} (->> (db/seated-players {:game-id game})
                 (map (fn [{player :player_id
+                           username :username
                            seat-number :seat_number}]
-                       [seat-number player])))))
+                       [seat-number {:player-id player
+                                     :username username}])))))
 
 (def phase-order [:pre :flop :turn :river :end])
 
@@ -193,36 +197,37 @@
         db-state (db/game-state {:game-id game
                                  :hand-id hand
                                  :phase (keyword "phase" (name phase))})
-        seats (seat-states db-state)]
+        player-order (-> (db/player-order {:hand-id hand})
+                         :players)
+        seats (seat-states db-state player-order)
+        curr {:hand-id hand
+              :phase (-> phase name keyword)
+              :board (board hand)
+              :hole-cards (hole-cards db-state)
+              :stacks (stacks db-state)
+              :seat-numbers (seat-numbers game)
+              :pots (map (fn [pot] [(:amount pot) (:players pot)])
+                         pots)}]
+    (println "seats: " seats)
+    (println "actions: " (bet/actions-and-next-seat seats))
     (if (= :end phase)
-      (let [winners (db/winners {:hand-id hand})
-            winner (:player_id (last winners))]
-        {:hand-id hand
-         :next-player winner
-         :possible-actions '()
-         :phase :end
-         :board (board hand)
-         :hole-cards (hole-cards db-state)
-         :stacks (stacks db-state)
-         :seat-numbers (seat-numbers game)
-         :pots (map (fn [pot] [(:amount pot) (:players pot)])
-                    pots)
-         :committed {}
-         :winners winners})
+      (let [winners (map (fn [{id :player_id
+                               total :total}]
+                           [id total])
+                         (db/winners {:hand-id hand}))
+            winner (first (last winners))]
+        (assoc curr
+               :next-player winner
+               :possible-actions '()
+               :committed {}
+               :winners winners))
       (let [[history next-seat] (bet/actions-and-next-seat seats)
             possible (bet/possible-actions history next-seat big-blind)]
-        {:hand-id hand
-         :next-player (:player next-seat)
-         :possible-actions possible
-         :phase (-> phase name keyword)
-         :board (board hand)
-         :hole-cards (hole-cards db-state)
-         :stacks (stacks db-state)
-         :seat-numbers (seat-numbers game)
-         :pots (map (fn [pot] [(:amount pot) (:players pot)])
-                    pots)
-         :committed (bet/committed-by-player history)
-         :winners (db/winners {:hand-id hand})}))))
+        (assoc curr
+               :next-player (:player next-seat)
+               :possible-actions possible
+               :committed (bet/committed-by-player history)
+               :winners '())))))
 
 (defn logs [game]
   (->> (db/logs {:game-id game})

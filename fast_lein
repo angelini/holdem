@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+LEIN_FAST_TRAMPOLINE=y \
+LEIN_JVM_OPTS="" \
+LEIN_JAVA_CMD="$HOME/bin/drip" \
+lein trampoline "$@"

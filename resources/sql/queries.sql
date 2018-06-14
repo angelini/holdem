@@ -20,11 +20,13 @@ WITH latest_events AS (
     WHERE game_id = :game-id
     GROUP BY seat_number
 )
-SELECT player_id, seats.seat_number
+SELECT player_id, username, seats.seat_number
 FROM seats
     INNER JOIN latest_events
     ON seats.seat_number = latest_events.seat_number
     AND seats.event_time = latest_events.event_time
+    INNER JOIN players
+    ON player_id = players.id
 WHERE player_id IS NOT NULL
 ORDER BY seats.seat_number
 
@@ -58,6 +60,11 @@ FROM hands h
     ON h.game_id = g.id
 WHERE h.game_id = :game-id
 GROUP BY g.id
+
+-- :name player-order :? :1
+SELECT players
+FROM hands
+WHERE id = :hand-id
 
 -- :name start-hand! :<! :1
 INSERT INTO hands (game_id, seed, players, event_time)

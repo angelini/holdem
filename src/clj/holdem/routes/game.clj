@@ -40,7 +40,7 @@
 
 (defn start-hand [game-id request]
   (if (authenticated? request)
-    {:body {:id (game/start-hand game-id)}
+    {:body {:id (game/start-hand (Integer/parseInt game-id))}
      :status 201}
     (redirect "/login")))
 

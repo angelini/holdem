@@ -17,6 +17,9 @@
           next-seat-idx (if (= seat-idx (dec (count seats)))
                           0 (inc seat-idx))
           [action-type action-val] (get (:actions seat) rotation-idx)]
+      (println "seats: " seats)
+      (println "seat: " seat)
+      (println "next-seat-idx: " next-seat-idx)
       (if (= (count (:actions seat)) rotation-idx)
         [history seat]
         (recur (if (= next-seat-idx 0)

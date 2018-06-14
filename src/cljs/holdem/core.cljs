@@ -21,6 +21,11 @@
          :headers {"x-csrf-token" js/csrfToken}
          :handler #(refresh-state)}))
 
+(defn next-hand []
+  (POST (gstring/format "/games/%d/hands" js/gameId)
+        {:headers {"x-csrf-token" js/csrfToken}
+         :handler #(refresh-state)}))
+
 (defn card [c key]
   [:div.card.col {:key key}
    (if (= c :hidden)
@@ -48,63 +53,95 @@
 (defn player [seat-number]
   (if (not (contains? (:seat-numbers @state) seat-number))
     [:span "Open"]
-    (let [player (get-in @state [:seat-numbers seat-number])
-          committed (get-in @state [:committed player] 0)
-          stack (- (get-in @state [:stacks player]) committed)]
-      [:span {:class [(when (= player (:current-player @state)) "text-primary")
-                      (when (= player (:next-player @state)) "border border-primary")]}
-       (if (#{3 4 5 6 7} seat-number)
-         (string/join [(str committed) " / " stack])
-         (string/join [stack " / " (str committed)]))])))
+    (let [{player-id :player-id
+           username :username} (get-in @state [:seat-numbers seat-number])
+          committed (get-in @state [:committed player-id] 0)
+          stack (- (get-in @state [:stacks player-id]) committed)]
+      [:div {:class [(when (= player-id (:current-player @state)) "text-primary")
+                     (when (= player-id (:next-player @state)) "border border-primary")]}
+       [:div (if (#{3 4 5 6 7} seat-number)
+               (string/join [(str committed) " / " stack])
+               (string/join [stack " / " (str committed)]))]
+       [:div username]])))
+
+(defn pots []
+  [:div.col
+   (map-indexed (fn [idx [amount players]]
+                  [:span {:key (gstring/format "pot-%d" idx)} amount])
+                (:pots @state))])
 
 (defn players []
   [:div.players
    [:div.row
     [:div.col] [:div.col]
-    [:div.col (player 2)] [:div.col (player 3)]
+    [:div.col (player 2)] [:div.col] [:div.col (player 3)]
     [:div.col] [:div.col]]
    [:div.row
     [:div.col] [:div.col (player 1)]
-    [:div.col] [:div.col]
+    [:div.col] [:div.col] [:div.col]
     [:div.col (player 4)] [:div.col]]
    [:div.row
     [:div.col (player 0)] [:div.col]
-    [:div.col] [:div.col]
+    [:div.col] (pots) [:div.col]
     [:div.col] [:div.col (player 5)]]
    [:div.row
     [:div.col] [:div.col (player 9)]
-    [:div.col] [:div.col]
+    [:div.col] [:div.col] [:div.col]
     [:div.col (player 6)] [:div.col]]
    [:div.row
     [:div.col] [:div.col]
-    [:div.col (player 8)] [:div.col (player 7)]
+    [:div.col (player 8)] [:div.col] [:div.col (player 7)]
     [:div.col] [:div.col]]])
 
 (defn action [[action-kw minimum] key]
-  [:div.action.row {:key key}
-   [:input.col {:type "button"
-                :value (get {:bet "Bet"
-                             :fold "Fold"
-                             :check "Check"
-                             :call "Call"
-                             :raise "Raise"
-                             :all "All In"} action-kw)
-                :on-click (fn [event]
-                            (post-action action-kw minimum))}]
+  [:div.action.form-group {:key key}
+   [:input.btn.form-control {:type "button"
+                             :value (get {:bet "Bet"
+                                          :fold "Fold"
+                                          :check "Check"
+                                          :call "Call"
+                                          :raise "Raise"
+                                           :all "All In"} action-kw)
+                             :on-click (fn [event]
+                                         (post-action action-kw minimum))}]
    (if (not= minimum 0)
-     [:input.col {:placeholder minimum}]
+     [:input.form-control {:placeholder minimum}]
      [:div.col])])
 
-(defn hand [player-id]
-  (let [hole-cards (get-in @state [:hole-cards player-id])]
+(defn hand []
+  (let [player-id (:current-player @state)
+        hole-cards (get-in @state [:hole-cards player-id])]
     [:div.hand.row
      (card (first hole-cards) "hand-0")
      (card (second hole-cards) "hand-1")
      (when (= player-id (:next-player @state))
-       [:div.col-sm
-        (map-indexed (fn [idx possible]
-                       (action possible (gstring/format "action-%d" idx)))
-                     (:possible-actions @state))])]))
+       (if (not-empty (:winners @state))
+         [:div.col-sm
+          [:div.action.form-group
+           [:input.btn.form-control {:type "button"
+                                     :value "Next Hand"
+                                     :on-click (fn [event] (next-hand))}]]]
+         [:div.col-sm
+          (map-indexed (fn [idx possible]
+                         (action possible (gstring/format "action-%d" idx)))
+                       (:possible-actions @state))]))]))
+
+(defn player-username [player-id]
+  (->> (:seat-numbers @state)
+       vals
+       (filter #(= player-id (:player-id %)))
+       first
+       :username))
+
+(defn winners []
+  (when (not-empty (:winners @state))
+    [:div.alert.alert-success
+     (map-indexed (fn [idx [player-id amount]]
+                    [:div {:key (gstring/format "winner-%d" idx)}
+                     (gstring/format "%s won $%d"
+                                     (player-username player-id)
+                                     amount)])
+                  (:winners @state))]))
 
 (defn home []
   (refresh-state)
@@ -112,8 +149,8 @@
     [:div.container
      (board)
      (players)
-     (when (:current-player @state)
-       (hand (:current-player @state)))]))
+     (hand)
+     (winners)]))
 
 (defn init! []
   (reagent/render [#'home]
