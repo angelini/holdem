@@ -111,7 +111,19 @@
                    :raise "Raise"
                    :all "All In"} action-kw)
       :on-click (fn [event]
-                  (post-action action-kw minimum))}]]
+                  (let [nodes (-> (.-target event)
+                                  .-parentNode
+                                  .-parentNode
+                                  (.querySelectorAll "input"))
+                        node-value (if (= 2 (.-length nodes))
+                                     (-> nodes
+                                         (aget 1)
+                                         .-value)
+                                     "")
+                        value (if (= node-value "")
+                                minimum
+                                (js/parseInt node-value))]
+                    (post-action action-kw value)))}]]
    (if (not= minimum 0)
      [:div.col
       [:input.col.form-control {:placeholder minimum}]]
