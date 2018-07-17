@@ -1,1 +1,2 @@
-{:database-url "jdbc:postgresql://localhost/holdem?user=root&password=holdem"}
+{:database-url "jdbc:postgresql://localhost/holdem?user=root&password=holdem"
+ :port 3000}

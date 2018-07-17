@@ -94,6 +94,13 @@ INSERT INTO cards (hand_id, player_id, board_idx, deal_to, card_suit, card_rank,
     VALUES (:hand-id, :player-id, :board-idx, :deal-to, :card-suit, :card-rank, now())
     RETURNING id
 
+-- :name cannot-act :? :*
+SELECT DISTINCT player_id
+FROM actions
+WHERE hand_id = :hand-id
+    AND phase < :phase
+    AND player_action IN ('fold', 'all')
+
 -- :name insert-action! :<! :1
 INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, event_time)
     VALUES (:hand-id, :phase, (SELECT max(idx) + 1 FROM actions WHERE hand_id = :hand-id), :player-id, :action, :amount, now())

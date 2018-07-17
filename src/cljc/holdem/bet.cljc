@@ -16,19 +16,24 @@
     (let [seat (get seats seat-idx)
           next-seat-idx (if (= seat-idx (dec (count seats)))
                           0 (inc seat-idx))
-          [action-type action-val] (get (:actions seat) rotation-idx)]
-      (println "seats: " seats)
-      (println "seat: " seat)
-      (println "next-seat-idx: " next-seat-idx)
-      (if (= (count (:actions seat)) rotation-idx)
+          skip? (->> (:actions seat)
+                     last
+                     first
+                     #{:fold :all}
+                     boolean)
+          action (get (:actions seat) rotation-idx)]
+      (if (and (not skip?)
+               (= (count (:actions seat)) rotation-idx))
         [history seat]
         (recur (if (= next-seat-idx 0)
                  (inc rotation-idx) rotation-idx)
                next-seat-idx
-               (conj history
-                     {:player (:player seat)
-                      :action-type action-type
-                      :action-val action-val}))))))
+               (if (nil? action)
+                 history
+                 (conj history
+                       {:player (:player seat)
+                        :action-type (first action)
+                        :action-val (second action)})))))))
 
 (defn sum-bets [history]
   (reduce +
@@ -50,6 +55,19 @@
     (- highest-bet
        (get committed player 0))))
 
+(defn all-others-folded? [history players player]
+  (let [others (->> players
+                    (filter #(not= player %))
+                    (into #{}))
+        folded (->> history
+                    (group-by :player)
+                    (filter (fn [[player actions]]
+                              (boolean (some #(= :fold (:action-type %))
+                                             actions))))
+                    (map first)
+                    (into #{}))]
+    (= others folded)))
+
 (defn find-last-val-by-type [type history]
   (->> history
        (filter #(= (:action-type %) type))
@@ -62,11 +80,11 @@
       big))
 
 (def transitions-last-player
-  {nil    #{:bet :check :all}
+  {nil    #{:fold :bet :check :all}
    :small #{:big-blind}
    :big   #{:fold :call :raise :all}
    :bet   #{:fold :call :raise :all}
-   :fold  #{:fold :check :call :raise :all}
+   :fold  #{:bet :fold :check :call :raise :all}
    :check #{:bet :fold :check :call :raise :all}
    :call  #{:fold :check :call :raise :all}
    :raise #{:fold :call :raise :all}
@@ -74,7 +92,7 @@
    })
 
 (def transitions-current-player
-  {nil    #{:bet :check :call :raise :all}
+  {nil    #{:fold :bet :check :call :raise :all}
    :small #{:fold :call :raise :all}
    :big   #{:fold :check :call :raise :all}
    :bet   #{:fold :check :call :raise :all}
@@ -104,12 +122,14 @@
   (when (not (empty? actions))
     (first (last actions))))
 
-(defn possible-actions [history seat big]
+(defn possible-actions [history seat player-order big]
   (let [last (last-action history)
         last-by-seat (last-action-by-seat seat)
-        to-call (amount-to-call history (:player seat))]
-    (if (and (#{:bet :check :call :raise} last-by-seat)
-             (= 0 to-call))
+        to-call (amount-to-call history (:player seat))
+        all-folded (all-others-folded? history player-order (:player seat))]
+    (if (or (and (#{:bet :check :call :raise} last-by-seat)
+                 (= 0 to-call))
+            all-folded)
       '()
       (->> (get transitions-last-player last)
            (filter #((get transitions-current-player last-by-seat) %))

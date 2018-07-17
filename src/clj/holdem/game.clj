@@ -115,6 +115,7 @@
                (mapv (fn [action amount]
                        [(keyword action) amount])
                      actions amounts))))
+       (filter #((set player-order) (:player %)))
        (sort-by #(.indexOf player-order (:player %)))
        vec))
 
@@ -149,6 +150,16 @@
                            seat-number :seat_number}]
                        [seat-number {:player-id player
                                      :username username}])))))
+
+(defn player-order [hand phase]
+  (let [order (-> (db/player-order {:hand-id hand})
+                  :players)
+        cannot-act (->> (db/cannot-act {:hand-id hand
+                                        :phase (keyword "phase" (name phase))})
+                        (mapv :player_id)
+                        set)]
+    (filterv #(not (contains? cannot-act %))
+             order)))
 
 (def phase-order [:pre :flop :turn :river :end])
 
@@ -197,9 +208,12 @@
         db-state (db/game-state {:game-id game
                                  :hand-id hand
                                  :phase (keyword "phase" (name phase))})
-        player-order (-> (db/player-order {:hand-id hand})
-                         :players)
+        player-order (player-order hand phase)
         seats (seat-states db-state player-order)
+        winners (map (fn [{id :player_id
+                           total :total}]
+                       [id total])
+                     (db/winners {:hand-id hand}))
         curr {:hand-id hand
               :phase (-> phase name keyword)
               :board (board hand)
@@ -208,21 +222,15 @@
               :seat-numbers (seat-numbers game)
               :pots (map (fn [pot] [(:amount pot) (:players pot)])
                          pots)}]
-    (println "seats: " seats)
-    (println "actions: " (bet/actions-and-next-seat seats))
-    (if (= :end phase)
-      (let [winners (map (fn [{id :player_id
-                               total :total}]
-                           [id total])
-                         (db/winners {:hand-id hand}))
-            winner (first (last winners))]
+    (if (not (empty? winners))
+      (let [winner (first (last winners))]
         (assoc curr
                :next-player winner
                :possible-actions '()
                :committed {}
                :winners winners))
       (let [[history next-seat] (bet/actions-and-next-seat seats)
-            possible (bet/possible-actions history next-seat big-blind)]
+            possible (bet/possible-actions history next-seat player-order big-blind)]
         (assoc curr
                :next-player (:player next-seat)
                :possible-actions possible
@@ -240,7 +248,7 @@
                                  [player (keyword action) amount])
                                players actions amounts)}))))
 
-(defn insert-committed [game hand phase player committed]
+(defn insert-committed [game hand phase committed]
   (doseq [[amount players] (bet/pots committed)]
     (db/insert-pot! {:hand-id hand
                      :phase (keyword "phase" (name phase))
@@ -273,19 +281,21 @@
                                   :player-id player
                                   :action (keyword "player-action" (name action))
                                   :amount amount})
+          players-left (count (player-order hand phase))
           current-state (state game)]
       (when (empty? (:possible-actions current-state))
-        (if (= (next-phase phase) :end)
-          (do
-            (insert-committed game hand phase player (:committed current-state))
-            (finish-hand game hand current-state))
-          (insert-committed game hand phase player (:committed current-state))))
+        (insert-committed game hand phase (:committed current-state))
+        (when (or (= :end (next-phase phase))
+                  (= 1 (count (player-order hand (next-phase phase)))))
+          (finish-hand game hand current-state)))
       idx)))
 
 (defn example-game []
   (let [foo (create-player "foo" "foo")
         bar (create-player "bar" "bar")
+        baz (create-player "baz" "baz")
         game (start-game 10 2 4)
         foo-seat (add-player game foo 200)
-        bar-seat (add-player game bar 300)]
+        bar-seat (add-player game bar 300)
+        baz-seat (add-player game baz 150)]
     (start-hand game)))
