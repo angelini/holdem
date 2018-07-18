@@ -8,10 +8,22 @@
 (defonce state
   (reagent/atom nil))
 
+(defonce logs
+  (reagent/atom nil))
+
 (defn refresh-state []
   (GET (gstring/format "/games/%d/state" js/gameId)
        {:headers {"Accept" "application/transit+json"}
         :handler #(reset! state %)}))
+
+(defn refresh-logs []
+  (GET (gstring/format "/games/%d/logs" js/gameId)
+       {:headers {"Accept" "application/transit+json"}
+        :handler #(reset! logs %)}))
+
+(defn refresh []
+  (refresh-state)
+  (refresh-logs))
 
 (defn post-action [action-kw amount]
   (POST (gstring/format "/games/%d/hands/%d" js/gameId (:hand-id @state))
@@ -19,12 +31,12 @@
                   :amount amount
                   :phase (:phase @state)}
          :headers {"x-csrf-token" js/csrfToken}
-         :handler #(refresh-state)}))
+         :handler #(refresh)}))
 
 (defn next-hand []
   (POST (gstring/format "/games/%d/hands" js/gameId)
         {:headers {"x-csrf-token" js/csrfToken}
-         :handler #(refresh-state)}))
+         :handler #(refresh)}))
 
 (defn card [c key]
   [:div.col-2 {:key key}
@@ -54,6 +66,23 @@
                   (card board-card (gstring/format "board-%d" idx)))
                 (:board @state))
    [:div.col]])
+
+(defn player-username [player-id]
+  (->> (:seat-numbers @state)
+       vals
+       (filter #(= player-id (:player-id %)))
+       first
+       :username))
+
+(defn winners []
+  (when (not-empty (:winners @state))
+    [:div.alert.alert-success
+     (map-indexed (fn [idx [player-id amount]]
+                    [:div {:key (gstring/format "winner-%d" idx)}
+                     (gstring/format "%s won $%d"
+                                     (player-username player-id)
+                                     amount)])
+                  (:winners @state))]))
 
 (defn player [seat-number]
   (if (not (contains? (:seat-numbers @state) seat-number))
@@ -153,31 +182,33 @@
        [:div.col-4])
      [:div.col]]))
 
-(defn player-username [player-id]
-  (->> (:seat-numbers @state)
-       vals
-       (filter #(= player-id (:player-id %)))
-       first
-       :username))
+(defn hand-logs [hand actions key]
+  (map-indexed (fn [idx [player action-type value]]
+                 [:span {:key (gstring/format "%s-%d" key idx)}
+                  (gstring/format "h: %d, p: %-10s, t: %-5s, v: %d"
+                                  hand
+                                  (player-username player)
+                                  (name action-type)
+                                  value)])
+               actions))
 
-(defn winners []
-  (when (not-empty (:winners @state))
-    [:div.alert.alert-success
-     (map-indexed (fn [idx [player-id amount]]
-                    [:div {:key (gstring/format "winner-%d" idx)}
-                     (gstring/format "%s won $%d"
-                                     (player-username player-id)
-                                     amount)])
-                  (:winners @state))]))
+(defn log-viewer []
+  [:div.logs.row
+   [:pre.col-4
+    (map-indexed (fn [idx {hand :hand-id
+                            actions :actions}]
+                   (hand-logs hand actions (gstring/format "log-%d" hand)))
+                 (or @logs []))]])
 
 (defn home []
-  (refresh-state)
+  (refresh)
   (fn []
     [:div.container
      (board)
      (winners)
      (players)
-     (hand)]))
+     (hand)
+     (log-viewer)]))
 
 (defn init! []
   (reagent/render [#'home]

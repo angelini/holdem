@@ -26,3 +26,7 @@
 .suit {
     display: inline-block;
 }
+
+.logs > pre > span {
+    display: block;
+}
