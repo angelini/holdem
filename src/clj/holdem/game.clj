@@ -250,11 +250,11 @@
 
 (defn insert-committed [game hand phase committed]
   (doseq [[amount players] (bet/pots committed)]
+    (db/insert-pot! {:hand-id hand
+                     :phase (keyword "phase" (name phase))
+                     :amount amount
+                     :players players})
     (when (not= 0 amount)
-      (db/insert-pot! {:hand-id hand
-                       :phase (keyword "phase" (name phase))
-                       :amount amount
-                       :players players})
       (doseq [player players]
         (db/insert-stack-delta! {:game-id game
                                  :hand-id hand
