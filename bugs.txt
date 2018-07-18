@@ -1,0 +1,5 @@
+checks all around cannot end phase
+
+on flop: [:check 0] -> player can both bet and raise for 4
+
+little blind counted as side pot

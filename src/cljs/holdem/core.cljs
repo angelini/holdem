@@ -73,7 +73,8 @@
 (defn pots []
   [:div.col-2
    (map-indexed (fn [idx [amount players]]
-                  [:div.text-center {:key (gstring/format "pot-%d" idx)} amount])
+                  [:div.text-center {:key (gstring/format "pot-%d" idx)}
+                   (* amount (count players))])
                 (:pots @state))])
 
 (defn players []
@@ -174,9 +175,9 @@
   (fn []
     [:div.container
      (board)
+     (winners)
      (players)
-     (hand)
-     (winners)]))
+     (hand)]))
 
 (defn init! []
   (reagent/render [#'home]
