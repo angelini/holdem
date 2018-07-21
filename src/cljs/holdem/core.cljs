@@ -100,7 +100,7 @@
        [:div username]])))
 
 (defn pots []
-  [:div.col-2
+  [:div.col-4
    (map-indexed (fn [idx [amount players]]
                   [:div.text-center {:key (gstring/format "pot-%d" idx)}
                    (* amount (count players))])
@@ -183,22 +183,38 @@
      [:div.col]]))
 
 (defn hand-logs [hand actions key]
-  (map-indexed (fn [idx [player action-type value]]
-                 [:span {:key (gstring/format "%s-%d" key idx)}
-                  (gstring/format "h: %d, p: %-10s, t: %-5s, v: %d"
-                                  hand
-                                  (player-username player)
-                                  (name action-type)
-                                  value)])
-               actions))
+  (vec
+   (map-indexed (fn [idx [player action-type value]]
+                  [hand-log-scrolled hand player action-type value (gstring/format "%s-%d" key idx)]
+                  [:div.row {:key (gstring/format "%s-%d" key idx)}
+                   [:span.col-3 hand]
+                   [:span.col-3 (player-username player)]
+                   [:span.col-3 (name action-type)]
+                   [:span.col-3 value]])
+                actions)))
 
 (defn log-viewer []
-  [:div.logs.row
-   [:pre.col-4
-    (map-indexed (fn [idx {hand :hand-id
-                            actions :actions}]
-                   (hand-logs hand actions (gstring/format "log-%d" hand)))
-                 (or @logs []))]])
+  [:div.row
+   [:div.col-1]
+   [:div.col-6
+    [:div.row.font-weight-bold
+     [:span.col-3 "Hand"]
+     [:span.col-3 "Player"]
+     [:span.col-3 "Action"]
+     [:span.col-3 "Amount"]]
+    [:div.logs
+     (mapcat identity
+             (map-indexed (fn [idx {hand :hand-id
+                                    actions :actions}]
+                            (hand-logs hand actions (gstring/format "log-%d" hand)))
+                          (or @logs [])))]]])
+
+(def log-viewer-scrolled
+  (with-meta log-viewer
+    {:component-did-update (fn [comp]
+                             (let [node (reagent/dom-node comp)
+                                   logs-node (.querySelector node ".logs")]
+                               (set! (.-scrollTop logs-node) (.-scrollHeight logs-node))))}))
 
 (defn home []
   (refresh)
@@ -208,7 +224,7 @@
      (winners)
      (players)
      (hand)
-     (log-viewer)]))
+     [log-viewer-scrolled]]))
 
 (defn init! []
   (reagent/render [#'home]
