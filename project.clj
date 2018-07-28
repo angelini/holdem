@@ -1,5 +1,4 @@
 (defproject holdem "0.1.0-SNAPSHOT"
-
   :description "Texas Hold'em Web App"
   :url "https://github.com/angelini/holdem"
 
@@ -73,12 +72,14 @@
              :aot :all
              :uberjar-name "holdem.jar"
              :source-paths ["env/prod/clj"]
-             :resource-paths ["env/prod/resources"]}
+             :resource-paths ["env/prod/resources"]
+             :repl-options {:init-ns user
+                            :timeout 120000}}
 
    :dev           [:project/dev :profiles/dev]
    :test          [:project/dev :project/test :profiles/test]
 
-   :project/dev  {:jvm-opts ["-Dconf=dev-config.edn" "--add-modules" "java.xml.bind"]
+   :project/dev  {:jvm-opts ["-Dconf=dev-config.edn"]
                   :dependencies [[binaryage/devtools "0.9.10"]
                                  [com.cemerick/piggieback "0.2.2"]
                                  [doo "0.1.10"]
@@ -114,7 +115,7 @@
                   :repl-options {:init-ns user}
                   :injections [(require 'pjstadig.humane-test-output)
                                (pjstadig.humane-test-output/activate!)]}
-   :project/test {:jvm-opts ["-Dconf=test-config.edn" "--add-modules" "java.xml.bind"]
+   :project/test {:jvm-opts ["-Dconf=test-config.edn"]
                   :resource-paths ["env/test/resources"]
                   :cljsbuild
                   {:builds
