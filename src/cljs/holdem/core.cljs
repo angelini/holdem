@@ -129,7 +129,7 @@
     [:div.col (player 8)] [:div.col (player 7)]
     [:div.col] [:div.col]]])
 
-(defn action [[action-kw minimum] key]
+(defn action [[action-kw min] max key]
   [:div.action.form-group.row {:key key}
    [:div.col
     [:input.col.btn.btn-primary.form-control
@@ -151,17 +151,30 @@
                                          .-value)
                                      "")
                         value (if (= node-value "")
-                                minimum
+                                min
                                 (js/parseInt node-value))]
                     (post-action action-kw value)))}]]
-   (if (not= minimum 0)
+   (if (not= min 0)
      [:div.col
-      [:input.col.form-control {:placeholder minimum}]]
+      [:input.col.form-control
+       {:placeholder min
+        :disabled (= action-kw :call)
+        :type "number"
+        :min min
+        :max max
+        :on-blur (fn [event]
+                   (let [node (.-target event)]
+                     (when (> (js/parseInt (.-value node)) max)
+                       (set! (.-value node) max))
+                     (when (< (js/parseInt (.-value node)) min)
+                       (set! (.-value node) min))))}]]
      [:div.col])])
 
 (defn hand []
   (let [player-id (:current-player @state)
-        hole-cards (get-in @state [:hole-cards player-id])]
+        hole-cards (get-in @state [:hole-cards player-id])
+        maximum (- (get-in @state [:stacks player-id])
+                   (get-in @state [:committed player-id]))]
     [:div.hand.row
      [:div.col]
      (card (first hole-cards) "hand-0")
@@ -177,7 +190,7 @@
              :on-click (fn [event] (next-hand))}]]]
          [:div.col-4
           (map-indexed (fn [idx possible]
-                         (action possible (gstring/format "action-%d" idx)))
+                         (action possible maximum (gstring/format "action-%d" idx)))
                        (:possible-actions @state))])
        [:div.col-4])
      [:div.col]]))
