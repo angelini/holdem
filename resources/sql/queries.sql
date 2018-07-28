@@ -3,6 +3,11 @@ SELECT id, password_hash
 FROM players
 WHERE username = :username
 
+-- :name games :? :*
+SELECT id, small_blind, big_blind
+FROM games
+ORDER BY event_time
+
 -- :name create-player! :<! :1
 INSERT INTO players (username, password_hash, event_time)
     VALUES (:username, :password-hash, now())

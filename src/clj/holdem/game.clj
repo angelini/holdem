@@ -6,6 +6,12 @@
             [holdem.poker :as poker]
             [holdem.db.core :as db]))
 
+(defn list-games []
+  (->> (db/games)
+       (mapv #(clojure.set/rename-keys %
+                                       {:small_blind :small
+                                        :big_blind :big}))))
+
 (defn create-player [username password]
   (when (nil? (db/player-id-and-hash {:username username}))
     (-> {:username username

@@ -18,9 +18,14 @@
              (hashers/check password password-hash))
       (let [updated-session (assoc session :identity {:username username
                                                       :player-id player-id})]
-        (-> (redirect "/games/1")
+        (-> (redirect "/")
             (assoc :session updated-session)))
       (redirect "/login"))))
+
+(defn index-page [request]
+  (if (authenticated? request)
+    (layout/render "index.html" {:games (game/list-games)})
+    (redirect "/login")))
 
 (defn game-page [game-id request]
   (if (authenticated? request)
@@ -59,6 +64,7 @@
 (defroutes game-routes
   (GET "/login" [] (layout/render "login.html"))
   (POST "/login" [] authenticate)
+  (GET "/" [:as request] (index-page request))
   (GET "/games/:game-id" [game-id :as request] (game-page game-id request))
   (GET "/games/:game-id/state" [game-id :as request] (state game-id request))
   (GET "/games/:game-id/logs" [game-id :as request] (logs game-id request))
