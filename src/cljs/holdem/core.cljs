@@ -198,7 +198,6 @@
 (defn hand-logs [hand actions key]
   (vec
    (map-indexed (fn [idx [phase player action-type value]]
-                  [hand-log-scrolled hand player action-type value (gstring/format "%s-%d" key idx)]
                   [:div.row {:key (gstring/format "%s-%d" key idx)}
                    [:span.col-2 hand]
                    [:span.col-2 phase]
