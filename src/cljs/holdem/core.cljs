@@ -184,24 +184,26 @@
 
 (defn hand-logs [hand actions key]
   (vec
-   (map-indexed (fn [idx [player action-type value]]
+   (map-indexed (fn [idx [phase player action-type value]]
                   [hand-log-scrolled hand player action-type value (gstring/format "%s-%d" key idx)]
                   [:div.row {:key (gstring/format "%s-%d" key idx)}
-                   [:span.col-3 hand]
-                   [:span.col-3 (player-username player)]
-                   [:span.col-3 (name action-type)]
-                   [:span.col-3 value]])
+                   [:span.col-2 hand]
+                   [:span.col-2 phase]
+                   [:span.col-2 (player-username player)]
+                   [:span.col-2 (name action-type)]
+                   [:span.col-2 value]])
                 actions)))
 
 (defn log-viewer []
   [:div.row
    [:div.col-1]
-   [:div.col-6
+   [:div.col-8
     [:div.row.font-weight-bold
-     [:span.col-3 "Hand"]
-     [:span.col-3 "Player"]
-     [:span.col-3 "Action"]
-     [:span.col-3 "Amount"]]
+     [:span.col-2 "Hand"]
+     [:span.col-2 "Phase"]
+     [:span.col-2 "Player"]
+     [:span.col-2 "Action"]
+     [:span.col-2 "Amount"]]
     [:div.logs
      (mapcat identity
              (map-indexed (fn [idx {hand :hand-id

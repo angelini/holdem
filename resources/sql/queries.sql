@@ -72,14 +72,14 @@ INSERT INTO hands (game_id, seed, players, event_time)
     RETURNING id
 
 -- :name current-pots :? :*
-SELECT players, sum(amount) AS amount, max(phase) AS phase
+SELECT committed_players, possible_players, sum(amount) AS amount, max(phase) AS phase
 FROM pots
 WHERE hand_id = :hand-id
-GROUP BY players
+GROUP BY committed_players, possible_players
 
 -- :name insert-pot! :<! :1
-INSERT INTO pots (hand_id, phase, amount, players, event_time)
-    VALUES (:hand-id, :phase, :amount, :players, now())
+INSERT INTO pots (hand_id, phase, amount, committed_players, possible_players, event_time)
+    VALUES (:hand-id, :phase, :amount, :committed-players, :possible-players, now())
     RETURNING id
 
 -- :name board :? :*
@@ -158,7 +158,7 @@ FROM player_stacks s
     ON s.player_id = c.player_id
 
 -- :name logs :? :*
-SELECT hand_id, array_agg(player_id) AS player_ids, array_agg(player_action) AS player_actions, array_agg(amount) AS amounts
+SELECT hand_id, array_agg(phase) AS phases, array_agg(player_id) AS player_ids, array_agg(player_action) AS player_actions, array_agg(amount) AS amounts
 FROM actions
 WHERE hand_id IN (
     SELECT id

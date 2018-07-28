@@ -36,7 +36,8 @@ CREATE TABLE pots (
         hand_id integer REFERENCES hands(id) NOT NULL,
         phase phase NOT NULL,
         amount integer NOT NULL CHECK (amount >= 0),
-        players integer[] NOT NULL,
+        committed_players integer[] NOT NULL,
+        possible_players integer[] NOT NULL,
         event_time timestamp NOT NULL
         );
 

@@ -175,7 +175,7 @@
     (->> pots
          (map #(keyword (:phase %)))
          (sort-by #(.indexOf phase-order %))
-         first
+         last
          next-phase)))
 
 (defn hide-cards [player state]
@@ -220,7 +220,7 @@
               :hole-cards (hole-cards db-state)
               :stacks (stacks db-state)
               :seat-numbers (seat-numbers game)
-              :pots (map (fn [pot] [(:amount pot) (:players pot)])
+              :pots (map (fn [pot] [(:amount pot) (:committed_players pot)])
                          pots)}]
     (if (not (empty? winners))
       (let [winner (first (last winners))]
@@ -240,22 +240,26 @@
 (defn logs [game]
   (->> (db/logs {:game-id game})
        (mapv (fn [{hand :hand_id
+                   phases :phases
                    players :player_ids
                    actions :player_actions
                    amounts :amounts}]
                {:hand-id hand
-                :actions (mapv (fn [player action amount]
-                                 [player (keyword action) amount])
-                               players actions amounts)}))))
+                :actions (mapv (fn [phase player action amount]
+                                 [phase player (keyword action) amount])
+                               phases players actions amounts)}))))
 
-(defn insert-committed [game hand phase committed]
-  (doseq [[amount players] (bet/pots committed)]
+(defn insert-committed [game hand phase committed players]
+  (doseq [[amount committed-players] (bet/pots committed)]
     (db/insert-pot! {:hand-id hand
                      :phase (keyword "phase" (name phase))
                      :amount amount
-                     :players players})
+                     :committed-players committed-players
+                     :possible-players (-> (set players)
+                                           (clojure.set/union (set committed-players))
+                                           vec)})
     (when (not= 0 amount)
-      (doseq [player players]
+      (doseq [player committed-players]
         (db/insert-stack-delta! {:game-id game
                                  :hand-id hand
                                  :player-id player
@@ -263,18 +267,20 @@
 
 (defn finish-hand-folds [game hand winner]
   (doseq [{amount :amount
-           players :players} (db/current-pots {:hand-id hand})]
+           committed-players :committed_players} (db/current-pots {:hand-id hand})]
     (db/insert-stack-delta! {:game-id game
                              :hand-id hand
                              :player-id winner
-                             :delta (* amount (count players))})))
+                             :delta (* amount (count committed-players))})))
 
 (defn finish-hand-showdown [game hand current-state]
   (doseq [{amount :amount
-           players :players} (db/current-pots {:hand-id hand})]
-    (let [[winner _] (->> (:hole-cards current-state)
+           committed-players :committed_players
+           possible-players :possible_players} (db/current-pots {:hand-id hand})]
+    (let [possible-players (set possible-players)
+          [winner _] (->> (:hole-cards current-state)
                           (filter (fn [[player _]]
-                                    ((set players) player)))
+                                    (possible-players player)))
                           (map (fn [[player hole-cards]]
                                  [player (poker/best-possible-hand hole-cards (:board current-state))]))
                           (sort-by second poker/compare-hands)
@@ -282,7 +288,7 @@
       (db/insert-stack-delta! {:game-id game
                                :hand-id hand
                                :player-id winner
-                               :delta (* amount (count players))}))))
+                               :delta (* amount (count committed-players))}))))
 
 (defn insert-action [game hand phase player action amount]
   (conman/with-transaction [db/*db*]
@@ -295,7 +301,7 @@
           current-state (state game)
           player-order (player-order hand (next-phase phase))]
       (when (empty? (:possible-actions current-state))
-        (insert-committed game hand phase (:committed current-state))
+        (insert-committed game hand phase (:committed current-state) player-order)
         (cond
           (= 1 (count player-order))
           (finish-hand-folds game hand (first player-order))
