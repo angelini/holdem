@@ -3,7 +3,7 @@
 set -eu
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd)"
-SECRETS_DIR="$(realpath "${SCRIPTS_DIR}/../secrets")"
+SECRETS_DIR="$(cd "${SCRIPTS_DIR}/../secrets"; pwd)"
 
 if [[ $# -ne 2 ]]; then
   echo "usage: ${0} <name> <data>"

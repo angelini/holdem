@@ -3,9 +3,9 @@
 set -eu
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd)"
-PROJECT_DIR="$(realpath "${SCRIPTS_DIR}/..")"
+PROJECT_DIR="$(cd "${SCRIPTS_DIR}/.."; pwd)"
 
-SQL_PASS="$(${SCRIPTS_DIR}/decrypt.sh sql-1-password)"
+SQL_PASS="$("${SCRIPTS_DIR}/decrypt.sh" sql-1-password)"
 
 cat <<EOF > "${PROJECT_DIR}/holdem.env"
 PORT=3000
