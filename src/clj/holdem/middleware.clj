@@ -17,6 +17,21 @@
   (:import [javax.servlet ServletContext]
            [org.joda.time ReadableInstant]))
 
+(defn wrap-logging [handler]
+  (fn [req]
+    (let [{method :request-method
+           uri :uri
+           params :params} req]
+      (log/info (format "%s %s %s"
+                        (-> method
+                            name
+                            clojure.string/upper-case)
+                        uri
+                        (if (contains? params :password)
+                          "REDACTED"
+                          params))))
+    (handler req)))
+
 (defn wrap-internal-error [handler]
   (fn [req]
     (try

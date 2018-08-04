@@ -1,10 +1,28 @@
 (ns holdem.game
   (:require [buddy.hashers :as hashers]
+            [clj-time.core :as time]
             [clojure.data.generators :as generators]
+            [clojure.tools.logging :as log]
             [conman.core :as conman]
             [holdem.bet :as bet]
             [holdem.poker :as poker]
             [holdem.db.core :as db]))
+
+(defn fn-name [func]
+  (let [name (clojure.repl/demunge (str func))
+        idx (clojure.string/last-index-of name "@")]
+    (subs name 0 idx)))
+
+(defn time-fn [func args]
+  (let [start (time/now)
+        result (apply func args)
+        runtime (time/in-millis (time/interval start
+                                               (time/now)))]
+    (log/info (format "%s %s: %.4f"
+                      (fn-name func)
+                      (str args)
+                      (double (/ runtime 1000))))
+    result))
 
 (defn list-games []
   (->> (db/games)
@@ -205,7 +223,7 @@
                                     (:hole-cards state))))
         (assoc :current-player player))))
 
-(defn state [game]
+(defn state* [game]
   (let [{hand :hand_id
          big-blind :big_blind} (db/current-hand-and-big-blind
                                 {:game-id game})
@@ -242,6 +260,9 @@
                :possible-actions possible
                :committed (bet/committed-by-player history)
                :winners '())))))
+
+(defn state [game]
+  (time-fn state* [game]))
 
 (defn logs [game]
   (->> (db/logs {:game-id game})

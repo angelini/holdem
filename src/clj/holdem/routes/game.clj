@@ -1,6 +1,7 @@
 (ns holdem.routes.game
   (:require [buddy.auth :refer [authenticated? throw-unauthorized]]
             [buddy.hashers :as hashers]
+            [clojure.tools.logging :as log]
             [compojure.core :refer [defroutes GET POST]]
             [holdem.db.core :as db]
             [holdem.game :as game]

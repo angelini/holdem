@@ -20,6 +20,7 @@
   (middleware/wrap-base
     (routes
      (-> #'game-routes
+         (wrap-routes middleware/wrap-logging)
          (wrap-authorization backend)
          (wrap-authentication backend)
          (wrap-routes middleware/wrap-csrf)
