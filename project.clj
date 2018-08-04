@@ -9,7 +9,7 @@
                  [conman "0.7.8"]
                  [cprop "0.1.11"]
                  [funcool/struct "1.2.0"]
-                 [com.google.cloud/google-cloud-logging-logback "0.56.0-alpha"]
+                 [com.google.cloud/google-cloud-logging-logback "0.56.0-alpha" :exclusions [io.grpc/grpc-core]]
                  [luminus-immutant "0.2.4"]
                  [luminus-migrations "0.5.0"]
                  [luminus-nrepl "0.1.4"]

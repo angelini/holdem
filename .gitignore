@@ -16,3 +16,5 @@ profiles.clj
 figwheel_server.log
 .rebel_readline_history
 *-init.clj
+/deploy_target
+/holdem.env

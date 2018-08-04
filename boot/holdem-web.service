@@ -1,0 +1,12 @@
+[Unit]
+Description=Holdem Web
+After=cloud-sql-proxy.service
+
+[Service]
+WorkingDirectory=/home/alex/holdem
+EnvironmentFile=holdem.env
+ExecStart=/usr/bin/java -cp holdem.jar clojure.main -m holdem.core
+User=alex
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Cloud SQL Proxy
+After=network.target
+
+[Service]
+WorkingDirectory=/home/alex
+ExecStart=/home/alex/cloud_sql_proxy -instances=holdem-211616:us-east1:sql-1=tcp:5432
+User=alex
+
+[Install]
+WantedBy=multi-user.target
