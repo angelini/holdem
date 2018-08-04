@@ -16,10 +16,14 @@
             <pattern>%date{ISO8601} [%thread] %-5level %logger{36} - %msg %n</pattern>
         </encoder>
     </appender>
+    <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">
+        <log>holdem.log</log>
+    </appender>
     <logger name="org.apache.http" level="warn" />
     <logger name="org.xnio.nio" level="warn" />
     <logger name="com.zaxxer.hikari" level="warn" />
     <root level="INFO">
         <appender-ref ref="FILE" />
+        <appender-ref ref="CLOUD" />
     </root>
 </configuration>
