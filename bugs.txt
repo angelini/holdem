@@ -1,5 +1,5 @@
-on flop: [:check 0] -> player can both bet and raise for 4
-
-small-blind counted as side pot
-
 fetch only new log entries
+
+use default nginx layout
+
+renew let's encrypt
