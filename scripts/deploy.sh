@@ -29,18 +29,4 @@ cp -r "${SCRIPTS_DIR}" "${TARGET}/"
 
 gcloud compute ssh --zone "${ZONE}" "${INSTANCE}" -- -T rm -rf "${DIR_WITH_SHA}"
 gcloud compute scp --zone "${ZONE}" --recurse "${TARGET}" "${INSTANCE}:${DIR_WITH_SHA}"
-gcloud compute ssh --zone "${ZONE}" "${INSTANCE}" -- -T <<EOF
-  set -eux
-  rm -f holdem
-  ln -s "${DIR_WITH_SHA}" holdem
-  mkdir -p ./holdem/log
-  ./holdem/scripts/setup_proxy.sh
-  ./holdem/scripts/generate_env_file.sh
-  sudo cp ./holdem/resources/server/cloud-sql-proxy.service /lib/systemd/system/
-  sudo cp ./holdem/resources/server/holdem-nginx.service /lib/systemd/system/
-  sudo cp ./holdem/resources/server/holdem-web.service /lib/systemd/system/
-  sudo systemctl daemon-reload
-  sudo systemctl restart cloud-sql-proxy.service
-  sudo systemctl restart holdem-nginx.service
-  sudo systemctl restart holdem-web.service
-EOF
+gcloud compute ssh --zone "${ZONE}" "${INSTANCE}" -- -T "exec ${SHELL} -l ${DIR_WITH_SHA}/scripts/swap_version.sh ${DIR_WITH_SHA}"
