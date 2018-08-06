@@ -3,7 +3,7 @@
 set -eu
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd)"
-SECRETS_DIR="$(cd "${SCRIPTS_DIR}/../secrets"; pwd)"
+SECRETS_DIR="$(cd "${SCRIPTS_DIR}/../resources/secrets"; pwd)"
 
 if [[ $# -ne 2 ]]; then
   echo "usage: ${0} <name> <data>"
@@ -17,7 +17,7 @@ TMP_FILE="_tmp.txt"
 echo "${DATA}" > "${TMP_FILE}"
 
 function remove_tmp {
-  rm "${TMP_FILE}"
+  rm -f "${TMP_FILE}"
 }
 trap remove_tmp EXIT
 

@@ -2,6 +2,7 @@
   (:require [buddy.hashers :as hashers]
             [clj-time.core :as time]
             [clojure.data.generators :as generators]
+            [clojure.repl]
             [clojure.tools.logging :as log]
             [conman.core :as conman]
             [holdem.bet :as bet]

@@ -1,0 +1,16 @@
+[Unit]
+Description=NGINX
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+PIDFile=/home/alex/holdem/log/nginx.pid
+Environment=NGINX_CONF=/home/alex/holdem/resources/server/nginx.conf
+ExecStartPre=/usr/sbin/nginx -t -c "${NGINX_CONF}"
+ExecStart=/usr/sbin/nginx -c "${NGINX_CONF}"
+ExecReload=/usr/sbin/nginx -s reload "${NGINX_CONF}"
+ExecStop=/bin/kill -s QUIT "${MAINPID}"
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,10 +1,10 @@
 [Unit]
 Description=Holdem Web
-After=cloud-sql-proxy.service
+After=cloud-sql-proxy.service holdem-nginx.service
 
 [Service]
 WorkingDirectory=/home/alex/holdem
-EnvironmentFile=holdem.env
+EnvironmentFile=/home/alex/holdem/holdem.env
 ExecStart=/usr/bin/java -cp holdem.jar clojure.main -m holdem.core
 User=alex
 
