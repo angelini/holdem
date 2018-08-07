@@ -38,6 +38,12 @@
         {:headers {"x-csrf-token" js/csrfToken}
          :handler #(refresh)}))
 
+(defn add-player []
+  (POST (gstring/format "/games/%d" js/gameId)
+        {:params {:stack 300}
+         :headers {"x-csrf-token" js/csrfToken}
+         :handler #(refresh)}))
+
 (defn card [c key]
   [:div.col-2 {:key key}
    [:div.border.border-dark.card-value
@@ -83,6 +89,12 @@
                                      (player-username player-id)
                                      amount)])
                   (:winners @state))]))
+
+(defn join-game []
+  (when (nil? (player-username (:current-player @state)))
+    [:div.alert.alert-primary
+     [:button.btn.btn-success {:on-click (fn [event] (add-player))}
+      "Join Game"]]))
 
 (defn player [seat-number]
   (if (not (contains? (:seat-numbers @state) seat-number))
@@ -174,14 +186,20 @@
   (let [player-id (:current-player @state)
         hole-cards (get-in @state [:hole-cards player-id])
         maximum (- (get-in @state [:stacks player-id])
-                   (get-in @state [:committed player-id]))]
+                   (get-in @state [:committed player-id]))
+        next-player (:next-player @state)
+        first-hand? (and (nil? next-player)
+                         (= (get-in @state [:seat-numbers 0 :player-id]) player-id)
+                         (> (count (:seat-numbers @state)) 1))]
     [:div.hand.row
      [:div.col]
      (card (first hole-cards) "hand-0")
      (card (second hole-cards) "hand-1")
      [:div.col-2]
-     (if (= player-id (:next-player @state))
-       (if (not-empty (:winners @state))
+     (if (or (= player-id next-player)
+             first-hand?)
+       (if (or (not-empty (:winners @state))
+               first-hand?)
          [:div.col-4
           [:div.action.form-group
            [:input.btn.btn-primary.form-control
@@ -235,11 +253,13 @@
   (fn []
     [:div.container
      (board)
+     (join-game)
      (winners)
      (players)
      (hand)
      [log-viewer-scrolled]]))
 
 (defn init! []
+  (js/setInterval refresh 1500)
   (reagent/render [#'home]
                   (.getElementById js/document "app")))

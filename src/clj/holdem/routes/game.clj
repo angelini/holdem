@@ -44,6 +44,24 @@
     {:body (game/logs (Integer/parseInt game-id))}
     (redirect "/login")))
 
+(defn start-game [request]
+  (if (authenticated? request)
+    (let [{small :small
+           big :big} (:params request)
+          game-id (game/start-game 10
+                                   (Integer/parseInt small)
+                                   (Integer/parseInt big))]
+      (redirect (format "/games/%d" game-id)))
+    (redirect "/login")))
+
+(defn join-game [game-id request]
+  (if (authenticated? request)
+    (let [player (get-in request [:session :identity :player-id])
+          {stack :stack} (:params request)]
+      {:body {:seat-number (game/add-player (Integer/parseInt game-id) player stack)}
+       :status 200})
+    (redirect "/login")))
+
 (defn start-hand [game-id request]
   (if (authenticated? request)
     {:body {:id (game/start-hand (Integer/parseInt game-id))}
@@ -51,16 +69,16 @@
     (redirect "/login")))
 
 (defn insert-action [game-id hand-id request]
-  (let [player (get-in request [:session :identity :player-id])
-        {action :action
-         amount :amount
-         phase :phase} (:params request)]
-    (if (authenticated? request)
+  (if (authenticated? request)
+    (let [player (get-in request [:session :identity :player-id])
+          {action :action
+           amount :amount
+           phase :phase} (:params request)]
       {:body {:idx (game/insert-action (Integer/parseInt game-id)
                                        (Integer/parseInt hand-id)
                                        phase player action amount)}
-       :status 201}
-      (redirect "/login"))))
+       :status 201})
+    (redirect "/login")))
 
 (defroutes game-routes
   (GET "/login" [] (layout/render "login.html"))
@@ -69,6 +87,8 @@
   (GET "/games/:game-id" [game-id :as request] (game-page game-id request))
   (GET "/games/:game-id/state" [game-id :as request] (state game-id request))
   (GET "/games/:game-id/logs" [game-id :as request] (logs game-id request))
+  (POST "/games" [:as request] (start-game request))
+  (POST "/games/:game-id" [game-id :as request] (join-game game-id request))
   (POST "/games/:game-id/hands" [game-id :as request] (start-hand game-id request))
   (POST "/games/:game-id/hands/:hand-id" [game-id hand-id :as request]
         (insert-action game-id hand-id request)))

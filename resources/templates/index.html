@@ -11,6 +11,14 @@
           <span class="float-right">Min: {{game.small}}, Max: {{game.big}}</span>
         </a>
         {% endfor %}
+        <div class="list-group-item list-group-item-action">
+          <form action="/games" method="post" class="form-inline">
+            <input type="submit" class="btn btn-primary mr-2" value="New Game">
+            <input id="small-blind" class="form-control col-sm-4 mr-2" type="text" name="small" placeholder="Small Blind" required>
+            <input id="big-blind" class="form-control col-sm-4" type="text" name="big" placeholder="Big Blind" required>
+            <input name="__anti-forgery-token" value="{{ csrf-token }}" hidden />
+          </form>
+        </div>
       </div>
     </div>
     <div class="col-3"></div>
