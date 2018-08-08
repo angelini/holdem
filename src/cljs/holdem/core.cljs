@@ -170,7 +170,7 @@
      [:div.col
       [:input.col.form-control
        {:placeholder min
-        :disabled (= action-kw :call)
+        :disabled (#{:call :all} action-kw)
         :type "number"
         :min min
         :max max

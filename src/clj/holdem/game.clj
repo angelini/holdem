@@ -239,6 +239,8 @@
                            total :total}]
                        [id total])
                      (db/winners {:hand-id hand}))
+        [history next-seat] (bet/actions-and-next-seat seats)
+        committed (bet/committed-by-players history)
         curr {:hand-id hand
               :phase (-> phase name keyword)
               :board (board hand)
@@ -247,19 +249,26 @@
               :seat-numbers (seat-numbers game)
               :pots (map (fn [pot] [(:amount pot) (:committed_players pot)])
                          pots)}]
-    (if (not (empty? winners))
+    (cond
+      (not (empty? winners))
       (let [winner (first (last winners))]
         (assoc curr
                :next-player winner
                :possible-actions '()
                :committed {}
                :winners winners))
-      (let [[history next-seat] (bet/actions-and-next-seat seats)
-            possible (bet/possible-actions history next-seat player-order big-blind)]
+      (nil? next-seat)
+      (assoc curr
+             :next-player nil
+             :possible-actions '()
+             :committed committed
+             :winners '())
+      :else
+      (let [possible (bet/possible-actions history next-seat player-order big-blind)]
         (assoc curr
                :next-player (:player next-seat)
                :possible-actions possible
-               :committed (bet/committed-by-player history)
+               :committed committed
                :winners '())))))
 
 (defn state [game]
@@ -333,7 +342,8 @@
         (cond
           (= 1 (count player-order))
           (finish-hand-folds game hand (first player-order))
-          (= :end (next-phase phase))
+          (or (= :end (next-phase phase))
+              (= 0 (count player-order)))
           (finish-hand-showdown game hand current-state)))
       idx)))
 

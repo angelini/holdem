@@ -3,3 +3,5 @@ fetch only new log entries
 use default nginx layout
 
 renew let's encrypt
+
+all in and fold returns money to each player
