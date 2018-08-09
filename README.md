@@ -2,20 +2,21 @@
 
 generated using Luminus version "2.9.12.54"
 
-FIXME
+## run
 
-## Prerequisites
+1. start Postgres with a `holdem` database
+2. `lein figwheel`
+3. `lein repl`
 
-You will need [Leiningen][1] 2.0 or above installed.
+```clojure
+(restart)
+(do (reset-db) (restart-db) (holdem.game/example-game))
+```
 
-[1]: https://github.com/technomancy/leiningen
+## deploy
 
-## Running
+1. start sql-1 & web-1
 
-To start a web server for the application, run:
-
-    lein run 
-
-## License
-
-Copyright © 2018 FIXME
+```
+./scripts/deploy.sh web-1
+```

@@ -5,3 +5,7 @@ use default nginx layout
 renew let's encrypt
 
 all in and fold returns money to each player
+
+show winning hand on show down
+
+show whole board when hand ends in multiple all ins
