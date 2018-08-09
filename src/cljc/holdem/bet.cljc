@@ -168,10 +168,60 @@
                   [action-type ((action-minimum-fn action-type) history seat big)]))
            (filter #(>= to-all-in (get % 1)))))))
 
-(defn pots [committed]
-  (let [groups (->> committed
-                    (group-by second))
-        amounts (-> groups keys sort)]
-    (->> amounts
-         (map (fn [amount] [amount (mapv first
-                                         (get groups amount))])))))
+(defn find-all-ins [committed stacks]
+  (->> committed
+       (filter (fn [[player amount]]
+                 (= (stacks player) amount)))
+       (sort-by second)))
+
+(defn sub-from-all [player-amounts val]
+  (->> player-amounts
+       (map (fn [[player amount]]
+              [player (- amount val)]))
+       (filter (fn [[_ amount]]
+                 (> amount 0)))
+       (into {})))
+
+(defn pots [committed stacks]
+  (loop [committed committed
+         stacks stacks
+         pots* []
+         all-ins (find-all-ins committed stacks)]
+    (if (empty? all-ins)
+      (if (empty? committed)
+        pots*
+        (let [max-commit (-> (vals committed)
+                             sort
+                             last)
+              eligible (->> committed
+                            (filter (fn [[_ amount]]
+                                      (= amount max-commit))))
+              others (->> committed
+                          (filter (fn [[_ amount]]
+                                    (not= amount max-commit))))
+              total (+ (* (count eligible) max-commit)
+                       (->> others
+                            (map second)
+                            (reduce +)))]
+          (conj pots* [total eligible others])))
+      (let [min-all-in (second (first all-ins))
+            bet-more-eq (->> committed
+                          (filter (fn [[_ amount]]
+                                    (>= amount min-all-in))))
+            eligible (->> bet-more-eq
+                          (map (fn [[player _]]
+                                 [player min-all-in])))
+            bet-less (->> committed
+                          (filter (fn [[_ amount]]
+                                    (< amount min-all-in))))
+            total (+ (* (count eligible) min-all-in)
+                     (->> bet-less
+                          (map second)
+                          (reduce +)))
+            remaining-committed (sub-from-all bet-more-eq min-all-in)
+            remaining-stacks (sub-from-all stacks min-all-in)]
+        (recur remaining-committed
+               remaining-stacks
+               (conj pots* [total eligible bet-less])
+               (find-all-ins remaining-committed
+                             remaining-stacks))))))

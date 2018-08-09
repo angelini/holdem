@@ -113,9 +113,9 @@
 
 (defn pots []
   [:div.col-4
-   (map-indexed (fn [idx [amount players]]
+   (map-indexed (fn [idx [amount _]]
                   [:div.text-center {:key (gstring/format "pot-%d" idx)}
-                   (* amount (count players))])
+                   amount])
                 (:pots @state))])
 
 (defn players []

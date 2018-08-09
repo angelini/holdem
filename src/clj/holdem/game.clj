@@ -247,7 +247,7 @@
               :hole-cards (hole-cards db-state)
               :stacks (stacks db-state)
               :seat-numbers (seat-numbers game)
-              :pots (map (fn [pot] [(:amount pot) (:committed_players pot)])
+              :pots (map (fn [pot] [(:amount pot) (:players pot)])
                          pots)}]
     (cond
       (not (empty? winners))
@@ -286,38 +286,39 @@
                                  [phase player (keyword action) amount])
                                phases players actions amounts)}))))
 
-(defn insert-committed [game hand phase committed players]
-  (doseq [[amount committed-players] (bet/pots committed)]
+(defn insert-committed [game hand phase committed stacks players]
+  (doseq [[total eligible others] (bet/pots committed stacks)]
     (db/insert-pot! {:hand-id hand
                      :phase (keyword "phase" (name phase))
-                     :amount amount
-                     :committed-players committed-players
-                     :possible-players (-> (set players)
-                                           (clojure.set/union (set committed-players))
-                                           vec)})
-    (when (not= 0 amount)
-      (doseq [player committed-players]
+                     :amount total
+                     :players (vec (map first eligible))})
+    (doseq [[player amount] others]
+      (when (not= amount 0)
+        (db/insert-stack-delta! {:game-id game
+                                 :hand-id hand
+                                 :player-id player
+                                 :delta (* -1 amount)})))
+    (when (not= total 0)
+      (doseq [[player amount] eligible]
         (db/insert-stack-delta! {:game-id game
                                  :hand-id hand
                                  :player-id player
                                  :delta (* -1 amount)})))))
 
 (defn finish-hand-folds [game hand winner]
-  (doseq [{amount :amount
-           committed-players :committed_players} (db/current-pots {:hand-id hand})]
+  (doseq [{amount :amount} (db/current-pots {:hand-id hand})]
     (db/insert-stack-delta! {:game-id game
                              :hand-id hand
                              :player-id winner
-                             :delta (* amount (count committed-players))})))
+                             :delta amount})))
 
 (defn finish-hand-showdown [game hand current-state]
   (doseq [{amount :amount
-           committed-players :committed_players
-           possible-players :possible_players} (db/current-pots {:hand-id hand})]
-    (let [possible-players (set possible-players)
+           players :players} (db/current-pots {:hand-id hand})]
+    (let [players (set players)
           [winner _] (->> (:hole-cards current-state)
                           (filter (fn [[player _]]
-                                    (possible-players player)))
+                                    (players player)))
                           (map (fn [[player hole-cards]]
                                  [player (poker/best-possible-hand hole-cards (:board current-state))]))
                           (sort-by second poker/compare-hands)
@@ -325,7 +326,7 @@
       (db/insert-stack-delta! {:game-id game
                                :hand-id hand
                                :player-id winner
-                               :delta (* amount (count committed-players))}))))
+                               :delta amount}))))
 
 (defn insert-action [game hand phase player action amount]
   (conman/with-transaction [db/*db*]
@@ -338,7 +339,7 @@
           current-state (state game)
           player-order (player-order hand (next-phase phase))]
       (when (empty? (:possible-actions current-state))
-        (insert-committed game hand phase (:committed current-state) player-order)
+        (insert-committed game hand phase (:committed current-state) (:stacks current-state) player-order)
         (cond
           (= 1 (count player-order))
           (finish-hand-folds game hand (first player-order))
