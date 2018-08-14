@@ -7,5 +7,3 @@ renew let's encrypt
 show winning hand on show down
 
 show whole board when hand ends in multiple all ins
-
-kick out players with empty stacks

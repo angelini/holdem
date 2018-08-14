@@ -310,7 +310,8 @@
     (db/insert-stack-delta! {:game-id game
                              :hand-id hand
                              :player-id winner
-                             :delta amount})))
+                             :delta amount}))
+  (db/remove-empty-players! {:game-id game}))
 
 (defn finish-hand-showdown [game hand current-state]
   (doseq [{amount :amount
@@ -326,7 +327,8 @@
       (db/insert-stack-delta! {:game-id game
                                :hand-id hand
                                :player-id winner
-                               :delta amount}))))
+                               :delta amount})))
+  (db/remove-empty-players! {:game-id game}))
 
 (defn insert-action [game hand phase player action amount]
   (conman/with-transaction [db/*db*]

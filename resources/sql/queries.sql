@@ -20,20 +20,48 @@ INSERT INTO games (table_size, small_blind, big_blind, event_time)
 
 -- :name seated-players :? :*
 WITH latest_events AS (
-    SELECT seat_number, MAX(event_time) AS event_time
+    SELECT game_id, seat_number, MAX(event_time) AS event_time
     FROM seats
     WHERE game_id = :game-id
-    GROUP BY seat_number
+    GROUP BY game_id, seat_number
 )
 SELECT player_id, username, seats.seat_number
 FROM seats
     INNER JOIN latest_events
-    ON seats.seat_number = latest_events.seat_number
+    ON seats.game_id = latest_events.game_id
+    AND seats.seat_number = latest_events.seat_number
     AND seats.event_time = latest_events.event_time
     INNER JOIN players
     ON player_id = players.id
 WHERE player_id IS NOT NULL
 ORDER BY seats.seat_number
+
+-- :name remove-empty-players! :! :n
+WITH latest_events AS (
+    SELECT game_id, seat_number, MAX(event_time) AS event_time
+    FROM seats
+    WHERE game_id = :game-id
+    GROUP BY game_id, seat_number
+), current_seats AS (
+    SELECT player_id, seats.seat_number
+    FROM seats
+        INNER JOIN latest_events
+        ON seats.game_id = latest_events.game_id
+        AND seats.seat_number = latest_events.seat_number
+        AND seats.event_time = latest_events.event_time
+    WHERE player_id IS NOT NULL
+), empty_seats AS (
+    SELECT seat_number, SUM(delta) AS current_stack
+    FROM stacks
+        INNER JOIN current_seats
+        ON stacks.player_id = current_seats.player_id
+    WHERE game_id = :game-id
+    GROUP BY stacks.player_id, seat_number
+)
+INSERT INTO seats (game_id, player_id, seat_number, event_time)
+SELECT :game-id, NULL, seat_number, now()
+FROM empty_seats
+WHERE current_stack = 0
 
 -- :name add-player! :<! :1
 INSERT INTO seats (game_id, player_id, seat_number, event_time)
