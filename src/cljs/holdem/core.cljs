@@ -84,10 +84,13 @@
   (when (not-empty (:winners @state))
     [:div.alert.alert-success
      (map-indexed (fn [idx [player-id amount]]
-                    [:div {:key (gstring/format "winner-%d" idx)}
-                     (gstring/format "%s won $%d"
-                                     (player-username player-id)
-                                     amount)])
+                    (let [[card-1 card-2] (get-in @state [:hole-cards player-id])]
+                      [:div.row.mb-4 {:key (gstring/format "winner-%d" idx)}
+                       [:div.col-3 (gstring/format "%s won $%d"
+                                             (player-username player-id)
+                                             amount)]
+                       (card card-1 (gstring/format "winner-%d-card-1" idx))
+                       (card card-2 (gstring/format "winner-%d-card-2" idx))]))
                   (:winners @state))]))
 
 (defn join-game []

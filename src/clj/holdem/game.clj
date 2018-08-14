@@ -209,16 +209,22 @@
                           :turn #{0 1 2 3}
                           :river #{0 1 2 3 4}
                           :end #{0 1 2 3 4}}
-                         (:phase state))]
+                         (:phase state))
+        winners (->> (:winners state)
+                     (map first)
+                     (into #{}))
+        finished? (not (empty? winners))]
     (-> state
         (assoc :board (map-indexed (fn [idx card]
-                                     (if (shown-board idx)
+                                     (if (or finished?
+                                             (shown-board idx))
                                        card
                                        :hidden))
                                    (:board state)))
         (assoc :hole-cards (into {}
                                (map (fn [[id cards]]
-                                      (if (= id player)
+                                      (if (or (winners id)
+                                              (= id player))
                                         [id cards]
                                         [id [:hidden :hidden]]))
                                     (:hole-cards state))))
