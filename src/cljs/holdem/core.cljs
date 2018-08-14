@@ -122,27 +122,29 @@
                 (:pots @state))])
 
 (defn players []
-  [:div.players
-   [:div.row
-    [:div.col] [:div.col]
-    [:div.col (player 2)] [:div.col (player 3)]
-    [:div.col] [:div.col]]
-   [:div.row
-    [:div.col] [:div.col (player 1)]
-    [:div.col] [:div.col]
-    [:div.col (player 4)] [:div.col]]
-   [:div.row
-    [:div.col (player 0)] [:div.col]
-    (pots)
-    [:div.col] [:div.col (player 5)]]
-   [:div.row
-    [:div.col] [:div.col (player 9)]
-    [:div.col] [:div.col]
-    [:div.col (player 6)] [:div.col]]
-   [:div.row
-    [:div.col] [:div.col]
-    [:div.col (player 8)] [:div.col (player 7)]
-    [:div.col] [:div.col]]])
+  [:div.table
+   [:div.circle]
+   [:div.players.p-2
+    [:div.row
+     [:div.col] [:div.col]
+     [:div.col (player 2)] [:div.col (player 3)]
+     [:div.col] [:div.col]]
+    [:div.row
+     [:div.col] [:div.col (player 1)]
+     [:div.col] [:div.col]
+     [:div.col (player 4)] [:div.col]]
+    [:div.row
+     [:div.col (player 0)] [:div.col]
+     (pots)
+     [:div.col] [:div.col (player 5)]]
+    [:div.row
+     [:div.col] [:div.col (player 9)]
+     [:div.col] [:div.col]
+     [:div.col (player 6)] [:div.col]]
+    [:div.row
+     [:div.col] [:div.col]
+     [:div.col (player 8)] [:div.col (player 7)]
+     [:div.col] [:div.col]]]])
 
 (defn action [[action-kw min] max key]
   [:div.action.form-group.row {:key key}

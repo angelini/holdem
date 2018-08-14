@@ -2,12 +2,28 @@
     margin: 30px 0;
 }
 
+.table {
+    position: relative;
+    height: 100%;
+}
+
 .players {
     margin: 30px 0;
 }
 
 .players > .row {
     margin: 20px 0;
+}
+
+.circle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 50%;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(76, 175, 80, 0.2);
+    border: 1px solid black;
 }
 
 .hand {
