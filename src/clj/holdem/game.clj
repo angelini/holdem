@@ -194,14 +194,23 @@
       (second order)
       (recur (rest order)))))
 
-(defn current-phase [pots]
-  (if (empty? pots)
+(defn current-phase [objs]
+  (if (empty? objs)
     :pre
-    (->> pots
+    (->> objs
          (map #(keyword (:phase %)))
          (sort-by #(.indexOf phase-order %))
          last
          next-phase)))
+
+(defn is-showdown? [hand phase]
+  (let [last-actions (db/last-actions {:hand-id hand})
+        folds (->> last-actions
+                   (map #(keyword (:player_action %)))
+                   (filter #(= :fold %))
+                   count)]
+    (and (= phase :end)
+         (< folds (- (count last-actions) 1)))))
 
 (defn hide-cards [player state]
   (let [shown-board (get {:pre #{}
@@ -213,7 +222,10 @@
         winners (->> (:winners state)
                      (map first)
                      (into #{}))
-        finished? (not (empty? winners))]
+        finished? (not (empty? winners))
+        showdown? (if finished?
+                    (is-showdown? (:hand-id state) (:phase state))
+                    false)]
     (-> state
         (assoc :board (map-indexed (fn [idx card]
                                      (if (or finished?
@@ -222,12 +234,12 @@
                                        :hidden))
                                    (:board state)))
         (assoc :hole-cards (into {}
-                               (map (fn [[id cards]]
-                                      (if (or (winners id)
-                                              (= id player))
-                                        [id cards]
-                                        [id [:hidden :hidden]]))
-                                    (:hole-cards state))))
+                                 (map (fn [[id cards]]
+                                        (if (or (and showdown? (winners id))
+                                                (= id player))
+                                          [id cards]
+                                          [id [:hidden :hidden]]))
+                                      (:hole-cards state))))
         (assoc :current-player player))))
 
 (defn state* [game]
@@ -298,14 +310,8 @@
                      :phase (keyword "phase" (name phase))
                      :amount total
                      :players (vec (map first eligible))})
-    (doseq [[player amount] others]
+    (doseq [[player amount] (concat eligible others)]
       (when (not= amount 0)
-        (db/insert-stack-delta! {:game-id game
-                                 :hand-id hand
-                                 :player-id player
-                                 :delta (* -1 amount)})))
-    (when (not= total 0)
-      (doseq [[player amount] eligible]
         (db/insert-stack-delta! {:game-id game
                                  :hand-id hand
                                  :player-id player
@@ -319,15 +325,15 @@
                              :delta amount}))
   (db/remove-empty-players! {:game-id game}))
 
-(defn finish-hand-showdown [game hand current-state]
+(defn finish-hand-showdown [game hand hole-cards board winners]
   (doseq [{amount :amount
            players :players} (db/current-pots {:hand-id hand})]
-    (let [players (set players)
-          [winner _] (->> (:hole-cards current-state)
+    (let [eligible (clojure.set/intersection (set players) (set winners))
+          [winner _] (->> hole-cards
                           (filter (fn [[player _]]
-                                    (players player)))
-                          (map (fn [[player hole-cards]]
-                                 [player (poker/best-possible-hand hole-cards (:board current-state))]))
+                                    (eligible player)))
+                          (map (fn [[player cards]]
+                                 [player (poker/best-possible-hand cards board)]))
                           (sort-by second poker/compare-hands)
                           last)]
       (db/insert-stack-delta! {:game-id game
@@ -347,13 +353,15 @@
           current-state (state game)
           player-order (player-order hand (next-phase phase))]
       (when (empty? (:possible-actions current-state))
-        (insert-committed game hand phase (:committed current-state) (:stacks current-state) player-order)
+        (insert-committed game hand phase
+                          (:committed current-state) (:stacks current-state) player-order)
         (cond
           (= 1 (count player-order))
           (finish-hand-folds game hand (first player-order))
           (or (= :end (next-phase phase))
               (= 0 (count player-order)))
-          (finish-hand-showdown game hand current-state)))
+          (finish-hand-showdown game hand
+                                (:hole-cards current-state) (:board current-state) player-order)))
       idx)))
 
 (defn example-game []

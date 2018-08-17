@@ -133,6 +133,20 @@ WHERE hand_id = :hand-id
     AND phase < :phase
     AND player_action IN ('fold', 'all')
 
+-- :name last-actions :? :*
+WITH last_idx AS (
+    SELECT hand_id, player_id, max(idx) AS idx
+    FROM actions
+    WHERE hand_id = :hand-id
+    GROUP BY hand_id, player_id
+)
+SELECT a.player_id, a.idx, phase, player_action
+FROM actions a
+    INNER JOIN last_idx l
+    ON a.hand_id = l.hand_id
+    AND a.player_id = l.player_id
+    AND a.idx = l.idx
+
 -- :name insert-action! :<! :1
 INSERT INTO actions (hand_id, phase, idx, player_id, player_action, amount, event_time)
     VALUES (:hand-id, :phase, (SELECT max(idx) + 1 FROM actions WHERE hand_id = :hand-id), :player-id, :action, :amount, now())

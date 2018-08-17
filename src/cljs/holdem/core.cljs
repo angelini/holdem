@@ -116,10 +116,15 @@
 
 (defn pots []
   [:div.col-4
-   (map-indexed (fn [idx [amount _]]
+   (map-indexed (fn [idx amount]
                   [:div.text-center {:key (gstring/format "pot-%d" idx)}
                    amount])
-                (:pots @state))])
+                (->> (:pots @state)
+                     (group-by second)
+                     (map (fn [[_ player-amounts]]
+                            (->> player-amounts
+                                 (map first)
+                                 (reduce +))))))])
 
 (defn players []
   [:div.table
