@@ -94,10 +94,15 @@ FROM hands h
 WHERE h.game_id = :game-id
 GROUP BY g.id
 
--- :name player-order :? :1
-SELECT players
-FROM hands
-WHERE id = :hand-id
+-- -- :name player-order :? :1
+-- WITH hand_players AS (
+--     SELECT unnest(players) id
+--     FROM hands
+--     WHERE id = :hand-id
+-- )
+-- SELECT id, player_action
+-- FROM hand_players
+--     INNER JOIN 
 
 -- :name start-hand! :<! :1
 INSERT INTO hands (game_id, seed, players, event_time)
@@ -126,12 +131,12 @@ INSERT INTO cards (hand_id, player_id, board_idx, deal_to, card_suit, card_rank,
     VALUES (:hand-id, :player-id, :board-idx, :deal-to, :card-suit, :card-rank, now())
     RETURNING id
 
--- :name cannot-act :? :*
-SELECT DISTINCT player_id
-FROM actions
-WHERE hand_id = :hand-id
-    AND phase < :phase
-    AND player_action IN ('fold', 'all')
+-- -- :name cannot-act :? :*
+-- SELECT DISTINCT player_id
+-- FROM actions
+-- WHERE hand_id = :hand-id
+--     AND phase < :phase
+--     AND player_action IN ('fold', 'all')
 
 -- :name last-actions :? :*
 WITH last_idx AS (

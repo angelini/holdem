@@ -270,6 +270,6 @@
      [log-viewer-scrolled]]))
 
 (defn init! []
-  (js/setInterval refresh 1500)
+  ;; (js/setInterval refresh 1500)
   (reagent/render [#'home]
                   (.getElementById js/document "app")))

@@ -177,6 +177,7 @@
                                      :username username}])))))
 
 (defn player-order [hand phase]
+  
   (let [order (-> (db/player-order {:hand-id hand})
                   :players)
         cannot-act (->> (db/cannot-act {:hand-id hand
@@ -349,9 +350,12 @@
                                   :player-id player
                                   :action (keyword "player-action" (name action))
                                   :amount amount})
-          players-left (count (player-order hand phase))
           current-state (state game)
           player-order (player-order hand (next-phase phase))]
+      (println "---------------")
+      (println "(:possible-actions current-state): " (:possible-actions current-state))
+      (println "player-order: " player-order)
+      (println "(next-phase phase): " (next-phase phase))
       (when (empty? (:possible-actions current-state))
         (insert-committed game hand phase
                           (:committed current-state) (:stacks current-state) player-order)
